@@ -208,8 +208,18 @@ export default function Login() {
               />
             )}
 
-            {/* Google Sign In — Android-only (Apple guideline 4.8 on iOS) */}
-            {Platform.OS === 'android' && (
+            {/* Google Sign In — Android AND web. Never iOS-native: App Store guideline
+                4.8 requires Sign in with Apple alongside any third-party sign-in, and
+                that rule governs an APP STORE BINARY. A PWA in Safari is not reviewed by
+                Apple, so the web build may offer Google on an iPhone as freely as on a
+                desktop — which matters here, because web is the ONLY route iOS users
+                have. Do not "restore consistency" by dropping web from this gate.
+
+                ⚠️ Requires the deployed origin to be listed under Authorized JavaScript
+                origins on the OAuth client (Google Cloud project revelia-497203). Until
+                it is, GSI refuses with origin_mismatch and the catch surfaces a "Sign In
+                Failed" dialog — honest, but not working. */}
+            {(Platform.OS === 'android' || Platform.OS === 'web') && (
               <TouchableOpacity
                 onPress={handleGoogleSignIn}
                 className="w-full rounded-pill items-center justify-center border border-border-strong"

@@ -16,7 +16,7 @@
  * serving the previous shell; the deploy script rewrites it (see
  * package.json → web:deploy).
  */
-const VERSION = 'revelia-web-v2.1.0-202608071220';
+const VERSION = 'revelia-web-v2.1.0-202608071247';
 const SHELL = '/';
 
 self.addEventListener('install', (event) => {

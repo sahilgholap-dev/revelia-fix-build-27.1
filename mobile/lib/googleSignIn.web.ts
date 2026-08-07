@@ -69,21 +69,60 @@ export async function signInWithGoogle(): Promise<{ idToken: string; name: strin
   }
 
   return new Promise<{ idToken: string; name: string }>((resolve, reject) => {
-    const cancel = () => {
-      const err: any = new Error('Sign-In cancelled');
-      err.code = GOOGLE_SIGN_IN_CANCELLED;
-      reject(err);
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(backstop);
+      fn();
     };
+
+    const cancel = () =>
+      finish(() => {
+        const err: any = new Error('Sign-In cancelled');
+        err.code = GOOGLE_SIGN_IN_CANCELLED;
+        reject(err);
+      });
+
+    // 🔴 A BACKSTOP, BECAUSE GOOGLE CAN FAIL WITHOUT TELLING US. When the
+    //    origin is not on the OAuth client's authorised list, GSI rejects
+    //    INTERNALLY — observed as "[GSI_LOGGER]: FedCM get() rejects with
+    //    NetworkError" in the console — and neither the credential callback nor
+    //    the notification callback fires. Without this, the promise would never
+    //    settle: the caller's catch never runs, no dialog appears, and the
+    //    button is dead in exactly the way this whole class of bug keeps
+    //    presenting. A settled promise is the difference between a wrong answer
+    //    and no answer.
+    //
+    //    Generous on purpose — the account chooser is a human interaction and
+    //    must not be cut off mid-decision. This exists to guarantee an ending,
+    //    not to impose a deadline.
+    const backstop = setTimeout(() => {
+      finish(() => {
+        reject(
+          new Error(
+            'Google Sign-In did not respond. This usually means this site is not ' +
+              'authorised for Google Sign-In yet. Please use email sign-in.'
+          )
+        );
+      });
+    }, 120_000);
 
     google.accounts.id.initialize({
       client_id: CLIENT_ID,
+      // Opt in to FedCM, the path Google is making mandatory. The prompt-status
+      // methods used below are deprecated under it and warn in the console;
+      // they are kept as a FAST PATH for the cases they still report, with the
+      // backstop above as the guarantee.
+      use_fedcm_for_prompt: true,
       callback: (response: { credential?: string }) => {
         const idToken = response?.credential;
         if (!idToken) {
           cancel();
           return;
         }
-        resolve({ idToken, name: nameFromIdToken(idToken) });
+        finish(() => resolve({ idToken, name: nameFromIdToken(idToken) }));
       },
     });
 
@@ -91,11 +130,15 @@ export async function signInWithGoogle(): Promise<{ idToken: string; name: strin
     // is unavailable in some embedded webviews. Both are user-visible as
     // "nothing happened", so they are reported as a cancel and the email/OTP
     // path on the same screen remains the reliable route.
-    google.accounts.id.prompt((notification: any) => {
-      if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
-        cancel();
-      }
-    });
+    try {
+      google.accounts.id.prompt((notification: any) => {
+        if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+          cancel();
+        }
+      });
+    } catch (error) {
+      finish(() => reject(error));
+    }
   });
 }
 

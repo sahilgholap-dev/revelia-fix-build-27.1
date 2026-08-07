@@ -240,7 +240,12 @@ export default function Welcome() {
                 used, so the treatment is preserved rather than reinvented. ⚠️ Its height moves
                 to the `lg` step, which is what its two siblings already are: the screen's three
                 CTAs were three different heights and are now one. */}
-            {Platform.OS === 'android' && (
+            {/* Google Sign In — Android AND web, never iOS-native. App Store guideline 4.8
+                requires Sign in with Apple alongside third-party sign-in, and that rule governs
+                an APP STORE BINARY; a PWA in Safari is not reviewed by Apple, so web may offer
+                Google on an iPhone too — which matters because web is the ONLY route iOS users
+                have. See login.tsx for the full note. */}
+            {(Platform.OS === 'android' || Platform.OS === 'web') && (
               <Button
                 title="Sign in with Google"
                 onPress={handleGoogleSignIn}

@@ -393,7 +393,12 @@ export default function Signup() {
                 surface step this copy used. Its hand-rolled dimmed-while-loading treatment goes
                 with it: the primitive owns ONE disabled model for all its sites, and two
                 treatments for one state is what the primitive exists to collapse. */}
-            {Platform.OS === 'android' && (
+            {/* Google Sign In — Android AND web, never iOS-native. App Store guideline 4.8
+                requires Sign in with Apple alongside third-party sign-in, and that rule governs
+                an APP STORE BINARY; a PWA in Safari is not reviewed by Apple, so web may offer
+                Google on an iPhone too — which matters because web is the ONLY route iOS users
+                have. See login.tsx for the full note. */}
+            {(Platform.OS === 'android' || Platform.OS === 'web') && (
               <Button
                 title="Sign in with Google"
                 onPress={handleGoogleSignIn}

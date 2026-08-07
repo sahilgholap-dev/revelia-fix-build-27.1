@@ -222,8 +222,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithGoogle: async () => {
-    if (Platform.OS !== 'android') {
-      set({ error: 'Google Sign In is only available on Android' });
+    // 🔴 TWO gates guard this flow and BOTH have to agree — the button's own
+    //    Platform check in the three auth screens, and this one. Widening only
+    //    the UI made the button appear and then do nothing: this guard returned
+    //    early and merely set an inline error, so nothing threw and no dialog
+    //    appeared. If Google ever seems dead on a platform, check both.
+    //
+    //    Android and web are allowed; iOS-native is not, because App Store
+    //    guideline 4.8 requires Sign in with Apple alongside any third-party
+    //    sign-in. That rule governs an App Store binary — a PWA in Safari is
+    //    not reviewed by Apple, so the WEB build may offer Google on an iPhone,
+    //    which matters because web is the only route iOS users have.
+    if (Platform.OS !== 'android' && Platform.OS !== 'web') {
+      set({ error: 'Google Sign In is not available on this platform' });
       return;
     }
 
