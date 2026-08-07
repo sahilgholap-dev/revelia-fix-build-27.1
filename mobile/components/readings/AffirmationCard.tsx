@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { LockShell } from '@/components/ui/LockShell';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -70,7 +71,7 @@ export function AffirmationCard({ text, isLocked, onCopy }: AffirmationCardProps
   const handleCopy = async () => {
     await Clipboard.setStringAsync(text);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied!', 'Affirmation copied to clipboard');
+    showAlert('Copied!', 'Affirmation copied to clipboard');
     onCopy?.();
   };
 

@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Alert,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -44,9 +40,9 @@ export default function VerifyCode() {
     setIsResending(true);
     try {
       await api.post('/auth/forgot-password', { email });
-      Alert.alert('Code Sent', 'A new reset code has been sent to your email.');
+      showAlert('Code Sent', 'A new reset code has been sent to your email.');
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to resend code. Please try again.');
+      showAlert('Error', 'Failed to resend code. Please try again.');
     } finally {
       setIsResending(false);
     }

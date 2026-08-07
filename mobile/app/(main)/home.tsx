@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -217,7 +218,7 @@ export default function Home() {
             style={{ flex: 1, height: 140 }}   /* X13 — see above. Do not remove. */
             onPress={() => {
               if (profile?.faceReading) {
-                Alert.alert(
+                showAlert(
                   'Face Reading Available',
                   'You already have a face reading.',
                   [
@@ -285,7 +286,7 @@ export default function Home() {
             style={{ flex: 1, height: 140, marginTop: t.space['8'] }}   /* X13 — see the block above. Do not remove the height. */
             onPress={() => {
               if (profile?.palmReading) {
-                Alert.alert(
+                showAlert(
                   'Palm Reading Available',
                   'You already have a palm reading.',
                   [

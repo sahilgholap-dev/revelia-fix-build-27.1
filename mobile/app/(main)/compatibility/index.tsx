@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useBottomInsetPadding } from '@/hooks/useBottomInsetPadding';
 import { useCompatibilityStore } from '../../../store/compatibilityStore';
@@ -182,7 +183,7 @@ function IntroStep({ remainingFree, tier, onStart, onViewHistory, readingsCount,
                   key={key}
                   onPress={() => {
                     if (isLocked) {
-                      Alert.alert(
+                      showAlert(
                         'Premium Plus Feature',
                         'Non-love relationship types require Premium Plus.',
                         [
@@ -332,11 +333,11 @@ function PartnerInfoStep({ onNext, onBack }: {
 
   const handleNext = () => {
     if (!name.trim()) {
-      Alert.alert('Name Required', `Please enter the ${config.nameLabel.toLowerCase()}`);
+      showAlert('Name Required', `Please enter the ${config.nameLabel.toLowerCase()}`);
       return;
     }
     if (!birthDate) {
-      Alert.alert('Birth Date Required', "Please enter their birth date for an accurate compatibility reading");
+      showAlert('Birth Date Required', "Please enter their birth date for an accurate compatibility reading");
       return;
     }
 
@@ -567,7 +568,7 @@ function PartnerCaptureStep({ onCaptured, onBack }: {
       if (error?.response?.status === 422 && error?.response?.data?.error === 'INVALID_IMAGE') {
         const reason = error.response.data.reason;
         const validationMessage = getValidationMessage(reason);
-        Alert.alert(
+        showAlert(
           'Invalid Photo',
           validationMessage,
           [
@@ -580,13 +581,13 @@ function PartnerCaptureStep({ onCaptured, onBack }: {
 
       const message = error?.response?.data?.error || error?.message || 'Please try again later';
       if (message.toLowerCase().includes('network') || !error?.response) {
-        Alert.alert(
+        showAlert(
           'Upload Failed',
           'Network error. Please check your internet connection and try again.',
           [{ text: 'OK' }]
         );
       } else {
-        Alert.alert('Upload Failed', message);
+        showAlert('Upload Failed', message);
       }
     }
   };
@@ -605,7 +606,7 @@ function PartnerCaptureStep({ onCaptured, onBack }: {
     if (!hasPermission) {
       const granted = await requestPermission();
       if (!granted) {
-        Alert.alert('Camera Permission', 'Camera access is required to take photos');
+        showAlert('Camera Permission', 'Camera access is required to take photos');
         return;
       }
     }
@@ -738,7 +739,7 @@ function GeneratingCompatibilityStep({ partnerName, onReset }: { partnerName: st
       const msg = error?.response?.data?.error || error?.message || 'Something went wrong';
       // Check if it's a free tier limit
       if (msg.toLowerCase().includes('free') || msg.toLowerCase().includes('upgrade') || error?.response?.status === 403) {
-        Alert.alert(
+        showAlert(
           'Free Limit Reached',
           'You\'ve used your free compatibility reading. Upgrade to Premium for unlimited readings!',
           [
@@ -747,7 +748,7 @@ function GeneratingCompatibilityStep({ partnerName, onReset }: { partnerName: st
           ]
         );
       } else {
-        Alert.alert('Generation Failed', msg);
+        showAlert('Generation Failed', msg);
         resetFlow();
         onReset();
       }

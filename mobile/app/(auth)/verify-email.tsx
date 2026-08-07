@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { api } from '@/lib/api';
@@ -137,13 +131,13 @@ export default function VerifyEmail() {
     try {
       await api.post('/auth/send-verification', { email });
       setResendCooldown(60);
-      Alert.alert('Code Sent', 'A new verification code has been sent to your email.');
+      showAlert('Code Sent', 'A new verification code has been sent to your email.');
       setDigits(['', '', '', '', '', '']);
       setError('');
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Failed to resend code';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setIsResending(false);
     }

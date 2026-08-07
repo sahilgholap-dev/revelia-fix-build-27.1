@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useCompatibilityStore } from '../../../store/compatibilityStore';
@@ -16,7 +17,7 @@ export default function CompatibilityHistoryScreen() {
   
   const handleDelete = (id: string, partnerName: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
+    showAlert(
       'Delete Reading',
       `Are you sure you want to delete the reading with ${partnerName}?`,
       [
@@ -30,7 +31,7 @@ export default function CompatibilityHistoryScreen() {
               await deleteReading(id);
             } catch (error) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert('Error', 'Failed to delete reading');
+              showAlert('Error', 'Failed to delete reading');
             }
           }
         }

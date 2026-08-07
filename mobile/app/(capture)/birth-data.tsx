@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Button } from '@/components/ui/Button';
@@ -76,12 +71,12 @@ export default function BirthDataScreen() {
     minDate.setFullYear(now.getFullYear() - 120);
 
     if (date > now) {
-      Alert.alert('Invalid Date', 'Birth date cannot be in the future');
+      showAlert('Invalid Date', 'Birth date cannot be in the future');
       return false;
     }
 
     if (date < minDate) {
-      Alert.alert('Invalid Date', 'Please enter a valid birth date');
+      showAlert('Invalid Date', 'Please enter a valid birth date');
       return false;
     }
 
@@ -112,14 +107,14 @@ export default function BirthDataScreen() {
 
   const handleSubmit = async () => {
     if (!nameValid) {
-      Alert.alert(
+      showAlert(
         'Name Required',
         'Please enter your full name (2-100 characters, letters only).'
       );
       return;
     }
     if (!birthDate || !handedness) {
-      Alert.alert('Required Fields', 'Please fill in your birth date and handedness');
+      showAlert('Required Fields', 'Please fill in your birth date and handedness');
       return;
     }
 
@@ -140,7 +135,7 @@ export default function BirthDataScreen() {
             err?.response?.data?.error ||
             err?.message ||
             'Could not save your name. Please try again.';
-          Alert.alert('Name Issue', msg);
+          showAlert('Name Issue', msg);
           return;
         }
         setNameSubmitting(false);
@@ -174,7 +169,7 @@ export default function BirthDataScreen() {
       setRevealData(calculated);
       setShowReveal(true);
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error || 'Failed to save birth data');
+      showAlert('Error', err.response?.data?.error || 'Failed to save birth data');
     }
   };
 

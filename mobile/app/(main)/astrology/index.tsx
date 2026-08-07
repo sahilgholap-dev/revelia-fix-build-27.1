@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { NewBadge } from '@/components/ui/NewBadge';
@@ -191,7 +192,7 @@ export default function AstrologyHubScreen() {
 
   const handleGenerateChart = async () => {
     if (!profile?.birthData?.date) {
-      Alert.alert(
+      showAlert(
         'Birth Date Required',
         'Please add your birth date to generate your birth chart.',
         [
@@ -204,7 +205,7 @@ export default function AstrologyHubScreen() {
     try {
       await generateBirthChart();
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Chart Generation Failed',
         'There was a problem generating your birth chart. Please try again.',
         [{ text: 'OK' }]

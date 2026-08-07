@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Platform, Alert, Dimensions } from 'react-native';
+import { View, Text, ScrollView, Platform, Dimensions } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -51,7 +52,7 @@ export default function Welcome() {
         return;
       }
       console.error('Apple Sign In error:', err);
-      Alert.alert(
+      showAlert(
         'Apple Sign In Unavailable',
         "Apple Sign In is temporarily unavailable. Please tap 'Get Started' to create an account."
       );
@@ -63,7 +64,7 @@ export default function Welcome() {
       await loginWithGoogle();
     } catch (err: any) {
       console.error('Google Sign In error:', err);
-      Alert.alert(
+      showAlert(
         'Sign In Failed',
         'Google Sign In is unavailable. Please try again or use another sign-in method.'
       );

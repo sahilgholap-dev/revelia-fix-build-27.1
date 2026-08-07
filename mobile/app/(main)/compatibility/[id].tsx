@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Alert, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useBottomInsetPadding } from '@/hooks/useBottomInsetPadding';
@@ -49,7 +50,7 @@ export default function CompatibilityResultScreen() {
       const data = await compatibilityService.getCompatibilityById(id as string);
       setReading(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load reading');
+      showAlert('Error', 'Failed to load reading');
       router.back();
     } finally {
       setIsLoading(false);
@@ -89,7 +90,7 @@ export default function CompatibilityResultScreen() {
       if (isShareDismissal(error)) return;
       console.error('Share error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Share Failed', 'Unable to share the reading');
+      showAlert('Share Failed', 'Unable to share the reading');
     }
   };
 

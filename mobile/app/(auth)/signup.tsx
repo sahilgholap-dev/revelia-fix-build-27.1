@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Platform,
-  TouchableOpacity,
-  Alert,
-  Linking,
-} from 'react-native';
+import { View, Text, Platform, TouchableOpacity, Linking } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
@@ -99,7 +93,7 @@ export default function Signup() {
     }
 
     if (!termsAccepted) {
-      Alert.alert('Terms Required', 'Please accept the Terms of Service and Privacy Policy');
+      showAlert('Terms Required', 'Please accept the Terms of Service and Privacy Policy');
       hasError = true;
     }
 
@@ -121,7 +115,7 @@ export default function Signup() {
       });
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to send verification code';
-      Alert.alert('Error', errorMessage);
+      showAlert('Error', errorMessage);
     } finally {
       setIsSendingOtp(false);
     }
@@ -136,7 +130,7 @@ export default function Signup() {
         return;
       }
       console.error('Apple Sign In error:', err);
-      Alert.alert(
+      showAlert(
         'Apple Sign In Unavailable',
         "Apple Sign In is temporarily unavailable. Please tap 'Get Started' to create an account."
       );

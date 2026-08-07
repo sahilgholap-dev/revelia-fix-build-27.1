@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Alert,
-} from 'react-native';
+import { View, Text } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -37,14 +34,14 @@ export default function ForgotPassword() {
     setIsLoading(true);
     try {
       await api.post('/auth/forgot-password', { email });
-      Alert.alert(
+      showAlert(
         'Code Sent',
         'If an account exists with that email, a reset code has been sent. Check your email.',
         [{ text: 'OK', onPress: () => router.push({ pathname: '/(auth)/verify-code' as any, params: { email } }) }]
       );
     } catch (error: any) {
       const message = error?.response?.data?.error || error?.data?.error || 'Something went wrong. Please try again.';
-      Alert.alert('Error', message);
+      showAlert('Error', message);
     } finally {
       setIsLoading(false);
     }

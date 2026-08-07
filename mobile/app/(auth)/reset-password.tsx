@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Alert,
-} from 'react-native';
+import { View, Text } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -47,14 +44,14 @@ export default function ResetPassword() {
     setIsLoading(true);
     try {
       await api.post('/auth/reset-password', { email, code, newPassword });
-      Alert.alert(
+      showAlert(
         'Password Reset',
         'Your password has been reset successfully. You can now log in.',
         [{ text: 'Log In', onPress: () => router.replace('/(auth)/login') }]
       );
     } catch (error: any) {
       const message = error?.response?.data?.error || error?.data?.error || 'Failed to reset password. Please try again.';
-      Alert.alert('Error', message);
+      showAlert('Error', message);
     } finally {
       setIsLoading(false);
     }

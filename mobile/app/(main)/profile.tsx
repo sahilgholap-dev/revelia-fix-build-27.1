@@ -1,16 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Platform,
-  Linking,
-  Alert,
-  Image,
-  Share,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Platform, Linking, Image, Share } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -75,7 +65,7 @@ export default function Profile() {
   };
 
   const handleExportData = async () => {
-    Alert.alert(
+    showAlert(
       'Export Your Data',
       'We will prepare your data and send it to your email address.',
       [
@@ -86,9 +76,9 @@ export default function Profile() {
             try {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               const result = await accountService.exportData();
-              Alert.alert('Success', result.message || 'Your data export has been requested.');
+              showAlert('Success', result.message || 'Your data export has been requested.');
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to export data');
+              showAlert('Error', error.response?.data?.error || 'Failed to export data');
             }
           },
         },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { showAlert } from '@/lib/alert';
 
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,7 +52,7 @@ export default function PaywallScreen() {
   
   const handlePurchase = async () => {
     if (!offerings || !offerings.current) {
-      Alert.alert('Error', 'Subscription plans not loaded');
+      showAlert('Error', 'Subscription plans not loaded');
       return;
     }
     
@@ -62,7 +63,7 @@ export default function PaywallScreen() {
     );
     
     if (!selectedPackage) {
-      Alert.alert('Error', 'Selected plan not available');
+      showAlert('Error', 'Selected plan not available');
       return;
     }
     
@@ -73,12 +74,12 @@ export default function PaywallScreen() {
       
       if (success) {
         // Show success message
-        Alert.alert('Success!', 'Your subscription is now active', [
+        showAlert('Success!', 'Your subscription is now active', [
           { text: 'Continue', onPress: () => router.back() }
         ]);
       }
     } catch (error: any) {
-      Alert.alert('Purchase Failed', error.message || 'Please try again');
+      showAlert('Purchase Failed', error.message || 'Please try again');
     }
   };
   
@@ -88,14 +89,14 @@ export default function PaywallScreen() {
       const tier = await restorePurchases();
       
       if (tier !== 'free') {
-        Alert.alert('Success', 'Your subscription has been restored!', [
+        showAlert('Success', 'Your subscription has been restored!', [
           { text: 'Continue', onPress: () => router.back() }
         ]);
       } else {
-        Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
+        showAlert('No Purchases Found', 'No previous purchases were found to restore.');
       }
     } catch (error) {
-      Alert.alert('Restore Failed', 'Unable to restore purchases. Please try again.');
+      showAlert('Restore Failed', 'Unable to restore purchases. Please try again.');
     }
   };
   

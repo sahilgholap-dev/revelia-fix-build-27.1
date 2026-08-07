@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { shareReadingCard } from '@/utils/shareReading';
@@ -93,7 +94,7 @@ export function ShareCard({
       if (shared) onShared?.();
     } catch (error) {
       console.error('Share failed:', error);
-      Alert.alert('Share Failed', 'Unable to share at this time');
+      showAlert('Share Failed', 'Unable to share at this time');
     }
   };
 
