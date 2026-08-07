@@ -1,0 +1,15 @@
+# SPA fallback for Cloudflare Pages (and Netlify, same syntax).
+#
+# web.output is "single", so the export produces ONE index.html and every route
+# is resolved client-side by Expo Router. Without this rule a hard load or a
+# refresh on any path other than "/" — /readings/face, /astrology/daily, a push
+# notification deep link, a bookmarked page — returns the host's 404.
+#
+# It is not only a routing nicety: the service worker refreshes its offline
+# shell from navigation responses, so a 404 here would be a 404 cached as the
+# app. sw.js guards that too (it only stores a successful response), and the two
+# defences are deliberately independent.
+#
+# 200 = rewrite, not redirect: the URL the user sees is preserved, which is what
+# lets the router read the path on boot.
+/*    /index.html   200

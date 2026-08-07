@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+  The web document shell.
+
+  WHY THIS FILE AND NOT app/+html.tsx: `+html.tsx` is only rendered for
+  web.output "static" / "server". This app exports as "single" (an auth-gated
+  SPA — there is nothing to pre-render and no SEO surface), and in that mode the
+  Expo CLI reads public/index.html and falls back to its own template when the
+  file is absent. Measured: with only a +html.tsx present, the export silently
+  produced the default template and every PWA tag below was missing — no error,
+  no warning. See @expo/cli getTemplateIndexHtmlAsync.
+
+  The CLI substitutes %LANG_ISO_CODE% and %WEB_TITLE%, then appends the bundle
+  <script> and the stylesheet <link>. Leave both placeholders in place.
+
+  The colour literal below is the brand background, whose source of truth is
+  theme.js. It is repeated here because a static HTML shell cannot import the
+  theme, the same way app.json repeats it for the splash and adaptive icon.
+-->
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!-- viewport-fit=cover is what makes safe-area insets resolve under the
+         iPhone notch and home indicator once the PWA runs standalone. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover"
+    />
+    <title>%WEB_TITLE%</title>
+    <meta name="theme-color" content="#100E0D" />
+    <meta
+      name="description"
+      content="Face reading, palm reading, astrology, numerology and compatibility, grounded in your own birth chart."
+    />
+
+    <!-- iOS has no beforeinstallprompt and reads these instead. Without
+         apple-mobile-web-app-capable, launching from the home screen opens a
+         Safari tab with browser chrome — the exact thing the PWA exists to
+         avoid for iOS users. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Revelia" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+
+    <!-- The react-native-web root reset: full-height html/body, and body
+         scrolling disabled so <ScrollView> owns scrolling.
+         https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        /* Painted before React mounts so a cold load never flashes white — the
+           web counterpart of the nested background layers the native root
+           layout uses for the same reason. */
+        background-color: #100e0d;
+      }
+      body {
+        overflow: hidden;
+        /* Kills the rubber-band overscroll that makes an installed PWA feel
+           like a web page on iOS. */
+        overscroll-behavior-y: none;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+        background-color: #100e0d;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

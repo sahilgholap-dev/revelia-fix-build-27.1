@@ -22,6 +22,7 @@ import { subscriptionService } from '@/services/subscription.service';
 import { notificationService } from '@/services/notification.service';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { installTextDefaults } from '@/lib/textDefaults';
+import { registerServiceWorker } from '@/lib/registerSw';
 import '../global.css';
 import * as t from '@/theme';
 
@@ -45,6 +46,12 @@ const BRAND_BG = t.color.bg;
 // documented `Text.defaultProps` route is a silent no-op on React 19, and for the census showing
 // that 592 of this app's 1,118 <Text> nodes have no other way to name a face.
 installTextDefaults();
+
+// Web only (the native module is a no-op): registers /sw.js, which is what makes
+// the PWA installable and gives an installed app an offline launch. Module scope
+// like the call above, but for the opposite reason — it is not render-sensitive,
+// it simply has no dependency on React and nothing to wait for. It never throws.
+registerServiceWorker();
 
 // ╔══════════════════════════════════════════════════════════════════════════════════════╗
 // ║  PASS 4 · E1 — THE FIVE FACES.  RUNTIME `useFonts`, NEVER THE expo-font PLUGIN.       ║
