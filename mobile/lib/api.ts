@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import Constants from 'expo-constants';
 import { storage } from './storage';
 import { router } from 'expo-router';
+import { whenNavigationReady } from './navigationReady';
 
 // Shared types
 export interface ApiResponse<T = any> {
@@ -147,9 +148,14 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            // Refresh failed, clear auth and redirect to login
+            // Refresh failed, clear auth and redirect to login.
+            // Deferred until the navigator exists: this runs from an axios
+            // interceptor, so its timing is the server's, not the render
+            // tree's. A 401 landing during cold start used to throw
+            // "Attempted to navigate before mounting the Root Layout" and
+            // leave the page permanently blank. See lib/navigationReady.ts.
             await storage.clearAll();
-            router.replace('/(auth)/login');
+            whenNavigationReady(() => router.replace('/(auth)/login'));
             return Promise.reject(refreshError);
           } finally {
             this.isRefreshing = false;

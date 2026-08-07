@@ -43,7 +43,7 @@ export default function FaceCaptureScreen() {
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownScale = useSharedValue(1);
 
-  const { hasPermission, requestPermission, cameraRef, takePicture, isReady, setIsReady } = useCamera({
+  const { hasPermission, requestPermission, cameraRef, takePicture, isReady, setIsReady, permissionError } = useCamera({
     facing: 'front'
   });
   
@@ -331,6 +331,20 @@ export default function FaceCaptureScreen() {
           <Text allowFontScaling maxFontSizeMultiplier={1.3} style={styles.permissionText}>
             Revelia needs camera access to capture your face photo for readings.
           </Text>
+          {/* A refused request must SAY something. expo-camera's web path maps an
+              insecure origin, a site-blocked camera and a missing camera onto one
+              identical `denied` result, so without this line the screen re-renders
+              unchanged and the button reads as broken. Null on native, where the OS
+              dialog is its own explanation. */}
+          {permissionError ? (
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={1.3}
+              style={styles.permissionText}
+            >
+              {permissionError}
+            </Text>
+          ) : null}
           <TouchableOpacity onPress={requestPermission} style={styles.primaryButton}>
             <Text allowFontScaling maxFontSizeMultiplier={1.3} style={styles.primaryButtonText}>Grant Permission</Text>
           </TouchableOpacity>

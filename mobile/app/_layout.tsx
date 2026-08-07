@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Stack, useSegments, useRouter } from 'expo-router';
+import { Stack, useSegments, useRouter, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,6 +23,7 @@ import { notificationService } from '@/services/notification.service';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { installTextDefaults } from '@/lib/textDefaults';
 import { registerServiceWorker } from '@/lib/registerSw';
+import { setNavigationReady, safeNavigate } from '@/lib/navigationReady';
 import '../global.css';
 import * as t from '@/theme';
 
@@ -92,12 +93,16 @@ const FONT_MAP = {
 const FONT_WAIT_CEILING_MS = 3000;
 
 export default function RootLayout() {
-  const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
-  const { profile, fetchProfile } = useProfileStore();
+  const { isAuthenticated, isLoading, checkAuth, user, hasHydrated } = useAuthStore();
+  const { profile, fetchProfile, lastFetchOk } = useProfileStore();
   const { checkIn, hasCheckedInToday } = useEngagementStore();
   const { checkSubscriptionStatus } = useSubscriptionStore();
   const segments = useSegments();
   const router = useRouter();
+  // Mount signal for the navigator. Read here so the auth-redirect effect below
+  // can wait for it — see the comment at that effect for why a cold load at a
+  // deep route (a page refresh, on web) otherwise throws before anything renders.
+  const rootNavigationState = useRootNavigationState();
 
   // Holds a deep-link target captured before auth resolves (killed-app launch
   // via notification tap). Replayed by the deferred-nav effect below once the
@@ -282,27 +287,64 @@ export default function RootLayout() {
 
   // ---- Auth-state-driven navigation ----
   useEffect(() => {
+    // 🔴 WAIT FOR THE NAVIGATOR TO MOUNT BEFORE REDIRECTING. This is the same
+    //    guard app/index.tsx already applies to its <Redirect>, and the reason
+    //    is the same one its comment gives — this effect can race root-layout
+    //    mount. It was missing here, and on the WEB that is not a rare race but
+    //    the normal path for a COLD LOAD AT A DEEP ROUTE: expo-router restores
+    //    the URL, this effect runs before the navigator exists, and
+    //    router.replace throws "Attempted to navigate before mounting the Root
+    //    Layout component". The screen stays blank and the error names only
+    //    <ContextNavigator>, so it reads as a router bug rather than this line.
+    //
+    //    It matters far more on web than native because RELOADING THE PAGE IS A
+    //    NORMAL USER ACTION. Every deep link, every bookmark, every refresh,
+    //    and every push-notification landing hits this path. Measured: loading
+    //    /face-capture directly rendered an empty document.
+    if (!rootNavigationState?.key) return;
+    // Release anything that tried to navigate before the navigator existed —
+    // notably the api.ts 401 redirect, whose timing belongs to the server.
+    setNavigationReady();
     if (isLoading) return;
+
+    // 🔴 THE SAME TWO GATES app/index.tsx APPLIES, AND FOR THE SAME REASON — see
+    //    the Build 24 note there ("Tell Us About Yourself reappears on warm
+    //    resume"). Routing on the DEFAULT EMPTY profile sends a fully-onboarded
+    //    user back into onboarding.
+    //
+    //    This effect was missing them because on native it is not the entry
+    //    point: a cold start lands on "/" and index.tsx does the gating. On WEB
+    //    a cold load at any other route BYPASSES index.tsx entirely and this
+    //    effect decides alone — with the profile still unfetched. Measured after
+    //    the blank-page fix: all seven routes rendered, and every one of them
+    //    redirected an onboarded account to /birth-data. Same regression, new
+    //    door.
+    if (!hasHydrated) return;
+    if (isAuthenticated && !lastFetchOk) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inMainGroup = segments[0] === '(main)';
     const inCaptureGroup = segments[0] === '(capture)';
     const inPaywallGroup = segments[0] === '(paywall)';
 
+    // safeNavigate, not a bare router.replace: on a cold load the router can
+    // still reject a navigation at this point even though rootNavigationState
+    // already has a key. It retries for a few frames instead of throwing, which
+    // is what kept the page blank.
     if (!isAuthenticated && (inMainGroup || inCaptureGroup || inPaywallGroup)) {
-      router.replace('/(auth)/login');
+      safeNavigate(() => router.replace('/(auth)/login'));
     } else if (isAuthenticated && inAuthGroup) {
       if (!profile || !profile.birthData) {
-        router.replace('/(capture)/birth-data' as any);
+        safeNavigate(() => router.replace('/(capture)/birth-data' as any));
       } else if (!profile.images?.face) {
-        router.replace('/(capture)/face-capture');
+        safeNavigate(() => router.replace('/(capture)/face-capture'));
       } else if (!profile.images?.palmDominant) {
-        router.replace('/(capture)/palm-capture');
+        safeNavigate(() => router.replace('/(capture)/palm-capture'));
       } else {
-        router.replace('/(main)/home');
+        safeNavigate(() => router.replace('/(main)/home'));
       }
     }
-  }, [isAuthenticated, isLoading, segments, profile]);
+  }, [isAuthenticated, isLoading, segments, profile, rootNavigationState?.key, hasHydrated, lastFetchOk]);
 
   return (
     <ErrorBoundary>
@@ -324,7 +366,30 @@ export default function RootLayout() {
                   re-render, so their native views keep the system font until something else
                   invalidates them. Mounting the tree after the faces are registered is the only
                   version of this that is correct on a cold start. */}
-              {fontsReady ? (
+              {/* 🔴 ON WEB THE NAVIGATOR MUST EXIST ON THE *FIRST* RENDER, so the font gate
+                  above is bypassed there — and only there.
+
+                  Expo Router resolves the current URL into navigation state as it mounts. On
+                  native that is always "/" and nothing navigates until later, so rendering null
+                  for the few milliseconds fonts take is harmless. On web the URL can be ANY
+                  route — a refresh, a bookmark, a shared link, a notification landing — and the
+                  router tries to restore it immediately. With no navigator mounted it throws
+                  "Attempted to navigate before mounting the Root Layout component" and the tree
+                  never recovers: the page stays BLANK, and the error names only
+                  <ContextNavigator>, which points nowhere near this line.
+
+                  Measured before the fix: all seven of /home /readings /astrology /profile
+                  /face-capture /palm-capture /birth-data rendered an empty document on a cold
+                  load. In-app navigation was fine throughout, which is what makes it easy to
+                  miss — and reloading the page is a NORMAL user action on the web.
+
+                  🟢 THE ANDROID REASON FOR THE GATE DOES NOT APPLY ON WEB. It exists because a
+                  native text view resolves its typeface once, at creation, so children mounted
+                  before the faces registered keep the system font forever. A browser has no such
+                  problem: text reflows automatically when a webfont finishes loading. So web
+                  gives up nothing here, and NATIVE BEHAVIOUR IS UNCHANGED — the condition below
+                  still evaluates to `fontsReady` on iOS and Android. */}
+              {(fontsReady || Platform.OS === 'web') ? (
                 <Stack
                   screenOptions={{
                     headerShown: false,

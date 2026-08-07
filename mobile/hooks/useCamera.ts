@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { describeCameraFailureAsync } from '@/lib/cameraPermission';
 
 interface UseCameraOptions {
   facing?: CameraType;
@@ -14,20 +15,43 @@ interface UseCameraReturn {
   takePicture: () => Promise<string | null>;
   isReady: boolean;
   setIsReady: (ready: boolean) => void;
+  /**
+   * Why the last permission request failed, in words the user can act on, or
+   * null when there is nothing useful to add. Always null on native, where the
+   * OS dialog is its own explanation; on web it distinguishes an insecure
+   * connection from a blocked site from a missing camera, which otherwise all
+   * present as the button doing nothing at all.
+   */
+  permissionError: string | null;
 }
 
 export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   const { facing = 'front' } = options;
   const [permission, requestCameraPermission] = useCameraPermissions();
   const [isReady, setIsReady] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const isCapturing = useRef(false);
 
   const hasPermission = permission?.granted ?? null;
 
   const requestPermission = async () => {
-    const result = await requestCameraPermission();
-    return result.granted;
+    setPermissionError(null);
+    try {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        // A refusal must never be silent. expo-camera's web path maps every
+        // failure — insecure origin, site blocked, no camera — onto the same
+        // `denied` result, so without this the screen simply re-renders itself
+        // and the button looks broken.
+        setPermissionError(await describeCameraFailureAsync());
+      }
+      return result.granted;
+    } catch (err) {
+      console.warn('[camera] permission request threw:', err);
+      setPermissionError(await describeCameraFailureAsync());
+      return false;
+    }
   };
 
   const takePicture = useCallback(async () => {
@@ -95,6 +119,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     cameraRef,
     takePicture,
     isReady,
-    setIsReady
+    setIsReady,
+    permissionError
   };
 }
