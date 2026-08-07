@@ -1,0 +1,27 @@
+GENERATED — do not hand-edit, and do not replace by hand.
+
+  node scripts/check-brand-assets.js --emit
+
+Emitted from `assets/logo.png` by that script's `--emit` mode (P18a's artwork half, 2026-08-04).
+1024x1024, colour type 6, 56.4% fully TRANSPARENT, and all content inside the centre 66% —
+the four rules that script's `foregroundImage` rule set asserts, verified through the same
+decoder that wrote the file.
+
+WHY IT IS A SEPARATE FILE FROM `icon.png` AND ALWAYS MUST BE: `icon` must be OPAQUE and
+`foregroundImage` must be TRANSPARENT, so ONE file cannot satisfy both rule sets. `app.json`
+pointed both keys at `logo.png` up to 2026-08-04, which is why the shipped 2.0.0 adaptive icon
+had no transparency and filled 100% of its canvas — every circular launcher mask cropped 65.8%
+of the artwork, and a zodiac RING is the worst possible shape for that because its outer ring is
+exactly what the corners lose.
+
+The mark is cropped to its own INK bounding box (measured 1560x1560 of 1600, by hue) and scaled
+to 676x676 centred, which is the safe-zone side derived from the assertion's own formula rather
+than re-typed. Cropping is GEOMETRY: whatever ground sits inside that box is carried through
+untouched, and only the area outside becomes transparent. No pixel was recoloured — the
+RECOLOUR is `P70` and needs a role-to-token table from the designer.
+
+That transparency is also what finally makes `android.adaptiveIcon.backgroundColor` live; it had
+been set to the brand ground and was inert because the layer in front of it was fully opaque.
+
+To change it: change `logo.png` (or the emitter), then re-run the command above. It is
+deterministic — same input, same bytes — so a re-run leaves `git status` clean.

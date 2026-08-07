@@ -1,0 +1,116 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.log
+
+# Production
+build/
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+
+# Mobile
+mobile/.expo/
+mobile/dist/
+mobile/node_modules/
+
+# Backend
+server/dist/
+server/node_modules/
+server/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.temp
+.cache/
+
+# Sentry
+.sentryclirc
+sentry.properties
+
+# Service Account Keys (NEVER COMMIT)
+service-account-key.json
+*-service-account.json
+GoogleService-Info.plist
+
+# Apple Sign In Private Keys (NEVER COMMIT)
+*.p8
+AuthKey_*.p8
+
+# EAS Build
+eas-build-*.tar.gz
+
+# Apple Certificates (managed by EAS)
+*.p12
+*.mobileprovision
+*.certSigningRequest
+
+# Android Keystore (managed by EAS)
+*.keystore
+*.jks
+
+# Environment-specific files
+.env.development
+.env.staging
+.env.production
+.env.*.local
+-e 
+# Environment files
+*.env
+*.env.*
+-e 
+# Environment files
+*.env
+*.env.*
+.env.migration
+.claude/
+
+prompts.txt
+per-chat-report.md
+
+Personalized_Cosmic _Sample_Report.pdf
+tracking_files/R9-open-items-sid-pm.md
+
+# ── Trade secret — Timing Engine (R7) — NEVER COMMIT (server-side only per the handover header) ──
+# The confidential rule set + FX1–FX6 fixtures are the core Revelia trade secret. The handover is the
+# on-disk SOURCE doc; server/config/timing/ is where R7 Step 0 lands the transcribed rule set + fixtures.
+# DECIDED — S-R9f/D8 (PM 2026-07-17): the R7 rule set stays OUT of git PERMANENTLY and is fed at runtime by a
+# private-R2 loadConfidentialConfig loader (NOT commit-to-repo). Both paths below stay gitignored for good —
+# commit only the ENGINE CODE + fixture harness, never these. See sid-signoff.md S-R9f/D8 + owner-actions.md.
+plans/build-27/Revelia_Build27_Timing_Engine_Handover_v1.md
+server/config/timing/

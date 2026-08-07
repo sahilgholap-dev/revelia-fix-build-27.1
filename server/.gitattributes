@@ -1,0 +1,7 @@
+# Vendored MediaPipe Hands (handpose_3d, full) tfjs GraphModel weights — Build 27 R3.
+# ~7.6 MB, loaded OFFLINE by palmFeatures.service.ts via a custom tf.io fs load-router
+# (the lib's tfhub.dev default is deprecated). MUST stay git-tracked — EAS/Railway only
+# ship git-tracked files (cf. committed google-services.json). Treat as binary: never
+# normalize line-endings or diff.
+assets/hand-pose/**/*.bin binary
+assets/hand-pose/**/*.json -text

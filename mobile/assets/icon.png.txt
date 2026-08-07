@@ -1,0 +1,19 @@
+GENERATED — do not hand-edit, and do not replace by hand.
+
+  node scripts/check-brand-assets.js --emit
+
+Emitted from `assets/logo.png` by that script's `--emit` mode (P18a's artwork half, 2026-08-04).
+1024x1024, colour type 6, fully OPAQUE, full-bleed, no baked corners — the four rules that
+script's `icon` rule set asserts, verified through the same decoder that wrote the file.
+
+GEOMETRY ONLY. No pixel was recoloured. The composite over the brand ground is present and
+correct but is a MEASURED NO-OP while `logo.png` is 100% opaque; it becomes load-bearing if the
+artwork ever gains alpha. The RECOLOUR is a separate, open question — `P70` — and it needs a
+role-to-token table from the designer.
+
+This file previously held a placeholder carrying a bare "R", a DIFFERENT mark from the live
+medallion, and this sidecar read "Replace with actual icon before deployment". It is no longer a
+placeholder, and `app.json` points at it.
+
+To change it: change `logo.png` (or the emitter), then re-run the command above. It is
+deterministic — same input, same bytes — so a re-run leaves `git status` clean.

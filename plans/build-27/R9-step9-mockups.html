@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Revelia · Personalized Cosmic Report · Step 9 Mobile Mockups</title>
+<style>
+  :root{
+    --bg:#0B0B12; --surface:#16161F; --surface-2:#1C1C27; --surface-hi:#1A1733;
+    --border:#262633; --border-indigo:#3E3170;
+    --indigo:#6C5CE7; --indigo-grad:linear-gradient(135deg,#7B6EF6,#4B3BB8);
+    --link:#8B7BF7; --gold:#F2B33D; --gold-soft:#3a2f13;
+    --pink:#E84D8A; --sun:#F5B301; --moon:#16C0A6;
+    --text:#F4F4F8; --muted:#9A9AA8; --muted-2:#6C6C7A;
+    --ready:#34D399; --gen:#F2B33D; --fail:#F87171; --expired:#8A8A97;
+    --font:-apple-system,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:#050509; color:var(--text); font-family:var(--font);
+    padding:40px 28px 80px; line-height:1.45;
+  }
+  .page-head{max-width:1180px;margin:0 auto 28px}
+  .page-head h1{font-size:22px;font-weight:700;letter-spacing:-.2px;margin:0 0 4px}
+  .page-head .sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .notes{
+    background:#0d0d17;border:1px solid #1e1e2b;border-radius:14px;padding:18px 20px;
+    font-size:13px;color:#c7c7d2;max-width:1180px;margin:0 auto 34px
+  }
+  .notes h2{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:0 0 10px}
+  .notes .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.notes .grid{grid-template-columns:1fr}}
+  .notes code{background:#191926;color:#b9aef8;padding:1px 6px;border-radius:5px;font-size:12px}
+  .notes .flag{border-left:3px solid var(--gold);padding:10px 14px;background:#15120a;border-radius:8px;margin-top:14px}
+  .notes .flag b{color:var(--gold)}
+  .notes ul{margin:6px 0 0;padding-left:18px}
+  .notes li{margin:3px 0}
+
+  .gallery{display:flex;flex-wrap:wrap;gap:34px 30px;justify-content:center;max-width:1400px;margin:0 auto}
+  .screen{width:320px}
+  .cap{margin:0 4px 10px}
+  .cap .name{font-size:14px;font-weight:650}
+  .cap .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0;align-items:center}
+  .cap .tag{font-size:10.5px;letter-spacing:.03em;padding:2px 8px;border-radius:999px;font-weight:600}
+  .tag.state{background:#241f3d;color:#c3b6ff;border:1px solid #3a3160}
+  .tag.ep{background:#0f1a17;color:#63d3b4;border:1px solid #1d3b32;font-family:ui-monospace,Menlo,monospace;font-size:10px}
+  .cap .note{font-size:11.5px;color:var(--muted-2);margin:7px 0 0}
+  .cap .note b{color:var(--gold)}
+
+  /* ---- phone frame ---- */
+  .phone{
+    width:320px;height:664px;border-radius:34px;background:var(--bg);
+    border:1px solid #23232f;box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 6px #101019;
+    overflow:hidden;display:flex;flex-direction:column;position:relative
+  }
+  .sbar{display:flex;justify-content:space-between;align-items:center;padding:11px 18px 4px;font-size:12px;color:#e9e9f2;font-weight:600}
+  .sbar .rt{display:flex;gap:6px;align-items:center}
+  .sbar svg{display:block}
+  .body{flex:1;overflow:hidden;position:relative}
+  .scroll{position:absolute;inset:0;overflow:auto;padding:6px 16px 12px}
+  .scroll::-webkit-scrollbar{width:0}
+  .nav{
+    display:flex;justify-content:space-between;padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+    border-top:1px solid #16161f;background:#08080d
+  }
+  .nav .t{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:#5c5c6a;flex:1}
+  .nav .t.active{color:var(--indigo)}
+  .nav .t.active.gold{color:var(--gold)}
+  .nav .t svg{width:19px;height:19px}
+  .handle{width:120px;height:4px;background:#2a2a36;border-radius:99px;margin:5px auto 8px}
+
+  /* ---- app bits ---- */
+  .h-title{font-size:26px;font-weight:800;letter-spacing:-.5px;margin:6px 4px 14px}
+  .h-title.sm{font-size:22px}
+  .greet{font-size:13px;color:var(--muted);margin:4px 4px 0}
+  .greet + .h-title{margin-top:2px}
+  .sec-h{font-size:16px;font-weight:700;margin:16px 4px 10px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 14px}
+  .card + .card{margin-top:11px}
+  .row-card{display:flex;align-items:center;gap:13px}
+  .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;flex:none}
+  .ic.moon{background:var(--indigo-grad)}
+  .ic.star{background:radial-gradient(circle at 50% 40%,#7c5be0,#5836b8)}
+  .ic.num{background:#E8A63A}
+  .ic.pink{background:#E84D8A}
+  .ic.spark{background:#6C5CE7}
+  .ic svg{width:24px;height:24px}
+  .rc-body{flex:1;min-width:0}
+  .rc-title{font-size:15.5px;font-weight:700;line-height:1.2}
+  .rc-sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .chev{color:#54545f;flex:none}
+
+  .badge{font-size:10px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--gold);color:#1a1205}
+  .badge.plus{background:#6C5CE7;color:#fff}
+  .report-card{background:var(--surface-hi);border:1px solid var(--border-indigo)}
+  .tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+  .tags .pill{font-size:11px;font-weight:600;color:var(--gold);border:1px solid #4a3c1c;background:#1c1708;padding:4px 10px;border-radius:999px}
+
+  .btn{display:block;width:100%;text-align:center;border:none;border-radius:13px;padding:14px;font-size:15px;font-weight:700;font-family:var(--font);cursor:pointer}
+  .btn.primary{background:var(--indigo-grad);color:#fff}
+  .btn.gold{background:linear-gradient(135deg,#F6C25A,#E39B22);color:#241703}
+  .btn.ghost{background:transparent;border:1px solid #33333f;color:var(--text)}
+  .btn.small{padding:11px;font-size:14px}
+  .btn + .btn{margin-top:10px}
+  .linkbtn{display:inline-flex;gap:5px;align-items:center;color:var(--link);font-weight:650;font-size:13.5px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font)}
+
+  .hero{font-size:20px;font-weight:800;letter-spacing:-.3px;line-height:1.25;margin:14px 2px 8px}
+  .lede{font-size:13.5px;color:#c6c6d2;margin:0 2px 4px}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:999px}
+  .chip.credit{background:#12211b;color:#4fd3a6;border:1px solid #1f4034}
+  .chip.lock{background:var(--gold-soft);color:#f0bf5e;border:1px solid #4a3c1c}
+  .chip.cap{background:#1b1622;color:#c8b4ee;border:1px solid #362a4d}
+
+  .inside{margin:6px 2px 0}
+  .inside .it{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid #1a1a24;align-items:flex-start}
+  .inside .it:last-child{border-bottom:none}
+  .dot{width:7px;height:7px;border-radius:99px;background:var(--indigo);margin-top:6px;flex:none}
+  .it .it-t{font-size:13.5px;font-weight:650}
+  .it .it-s{font-size:11.5px;color:var(--muted)}
+
+  .disc{font-size:10.5px;color:var(--muted-2);text-align:center;margin:14px 6px 4px;line-height:1.5}
+
+  /* generating */
+  .orbit-wrap{display:grid;place-items:center;height:190px;margin-top:24px}
+  .orbit{width:126px;height:126px;border-radius:50%;border:1.5px solid #2a2545;position:relative;display:grid;place-items:center;animation:spin 5.5s linear infinite}
+  .orbit::before{content:"";position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px #f2b33d}
+  .orbit .core{width:58px;height:58px;border-radius:50%;background:var(--indigo-grad);display:grid;place-items:center;animation:spin-r 5.5s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes spin-r{to{transform:rotate(-360deg)}}
+  @media(prefers-reduced-motion:reduce){.orbit,.orbit .core{animation:none}}
+  .steps{margin:6px 2px 0}
+  .steps .s{display:flex;gap:10px;align-items:center;font-size:13px;padding:7px 0;color:var(--muted)}
+  .steps .s.done{color:var(--text)}
+  .steps .s.now{color:var(--gold)}
+  .tick{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:11px}
+  .tick.done{background:#173b2d;color:var(--ready)}
+  .tick.now{background:#332a10;color:var(--gold)}
+  .tick.wait{border:1.5px solid #33333f;color:transparent}
+
+  /* ready meta */
+  .meta{font-size:12px;color:var(--muted);margin:4px 2px 14px}
+  .metarow{display:flex;gap:8px;flex-wrap:wrap;margin:4px 2px 14px}
+  .metarow span{font-size:11.5px;color:var(--muted);background:#14141d;border:1px solid #212130;padding:4px 9px;border-radius:8px}
+  .save-note{font-size:11.5px;color:var(--muted-2);text-align:center;margin-top:14px}
+
+  /* history */
+  .hist{margin-top:6px}
+  .hist .h{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+  .hist .h + .h{margin-top:10px}
+  .status{font-size:10px;font-weight:800;letter-spacing:.05em;padding:3px 9px;border-radius:999px;flex:none}
+  .status.ready{background:#123024;color:var(--ready)}
+  .status.gen{background:#332a10;color:var(--gen)}
+  .status.exp{background:#22222b;color:var(--expired)}
+  .status.fail{background:#331717;color:var(--fail)}
+  .h-body{flex:1;min-width:0}
+  .h-m{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .h-t{font-size:13.5px;font-weight:650;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* empty / expired states */
+  .center-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:34px 12px 0}
+  .cs-ic{width:66px;height:66px;border-radius:20px;display:grid;place-items:center;margin-bottom:16px}
+  .cs-ic.dim{background:#1a1a24;border:1px solid #262633}
+  .cs-ic.moon{background:var(--indigo-grad)}
+  .cs-t{font-size:18px;font-weight:750}
+  .cs-s{font-size:13px;color:var(--muted);margin-top:8px;max-width:250px}
+
+  /* sample viewer */
+  .viewer{background:#0e0e16;border:1px solid #20202c;border-radius:14px;padding:12px;margin-top:8px}
+  .vbar{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:10px}
+  .pdfpg{background:#f7f5ef;color:#20242c;border-radius:8px;padding:16px 15px;font-size:8.5px;line-height:1.5;height:300px;overflow:hidden;position:relative}
+  .pdfpg .brand{font-size:15px;letter-spacing:.32em;font-weight:700;text-align:center;color:#2a2f3a;margin-top:24px}
+  .pdfpg .st{text-align:center;font-size:8px;letter-spacing:.18em;color:#8b8f98;margin-top:6px}
+  .pdfpg .ttl{text-align:center;font-size:11px;font-weight:700;margin-top:36px;color:#2a2f3a}
+  .pdfpg .who{text-align:center;font-size:8.5px;color:#5a5f6a;margin-top:8px}
+  .pdfpg .foot{position:absolute;left:15px;right:15px;bottom:10px;font-size:6.5px;color:#9aa;text-align:center;border-top:1px solid #ddd;padding-top:6px}
+  .pgdots{display:flex;gap:5px;justify-content:center;margin-top:10px}
+  .pgdots i{width:5px;height:5px;border-radius:99px;background:#33333f}
+  .pgdots i.on{background:var(--indigo)}
+  .zbadge{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;margin:0 auto;color:#fff;font-size:20px;font-weight:700}
+  .zbadge svg{width:22px;height:22px}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Personalized Cosmic Report · Step 9 mobile mockups</h1>
+  <p class="sub">R9 §14 Step 9 (§12u). Screens matched to the live app (dark / indigo / gold), wired to endpoints already live from 3b &amp; 8. Directional fidelity, not final pixels: this is the build reference for Claude Code and the artifact for D6 (Sid / PM) sign-off.</p>
+</div>
+
+<div class="notes">
+  <div class="grid">
+    <div>
+      <h2>What Step 9 consumes (no backend change)</h2>
+      <ul>
+        <li>DTO fields: <code>status</code> · <code>highlights.headline</code> · <code>secureLink</code> · <code>expired</code> · <code>tier</code> · <code>resetsAt</code></li>
+        <li><code>POST /api/reports</code> (enqueue, self) → 201 or <b>402</b></li>
+        <li><code>GET /api/reports/:id</code> (fresh 1h secureLink per call)</li>
+        <li><code>GET /api/reports</code> (history, link-less)</li>
+        <li><code>GET /api/reports/credit</code> (remaining + resetsAt)</li>
+      </ul>
+    </div>
+    <div>
+      <h2>The 402 copy split (the thing mobile must get right)</h2>
+      <ul>
+        <li><b>Free-locked</b> (<code>tier:'free'</code>): feature is Premium. CTA = upgrade. Sample still viewable.</li>
+        <li><b>Paid-cap</b> (<code>tier:'premium'</code> + <code>resetsAt</code>): limit is 1/month, not a paywall. CTA = open this month's report, next unlocks on <code>resetsAt</code>.</li>
+        <li>Both return 402 with the same shape; only <code>tier</code>/<code>resetsAt</code> distinguish them. Never show "upgrade" to a paid user.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="flag">
+    <b>RESOLVED — the expired state.</b> Owner greenlit a small backend route inside Step 9: an expired report (60-day R2 object gone) can <b>rebuild its PDF from the stored Mongo interpretation</b>, with <b>no re-Fable and no credit charge</b>. Recommended shape: enqueue a re-render the existing worker runs (render → QA → upload), keeping LibreOffice off the API request path. The interpretation is the durable asset; the PDF is a regenerable cache. See screen 9 + §12u DO 7-8.
+  </div>
+  <div class="flag" style="border-color:#3a3160;background:#12101c;margin-top:10px">
+    <b style="color:#b9aef8">Assumptions stated inline</b> (flag any to change): entry cards live on both Home/Explore and the Astrology tab; the tapped card opens a single Report hub whose screen is driven by <code>status</code>+<code>tier</code>; generating polls to ready; email is the convenience path, in-app is durable. <b style="color:#f0bf5e">In-app sample viewer is DEFERRED to a future build</b> — so the sample PDF → R2 upload is no longer a Step 9 gate, and there is no in-app "see before you buy" surface in v1. No face anywhere; palm is self-only.
+  </div>
+</div>
+
+<div class="gallery">
+
+  <!-- 1. HOME / EXPLORE ENTRY -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">1 · Home → Explore entry</div>
+      <div class="row"><span class="tag state">all users</span><span class="tag ep">list card</span></div>
+      <div class="note">Indigo icon + gold <b>NEW</b> badge. Card is identical for free and paid; gating happens on tap.</div>
+    </div>
+    <div class="phone" data-time="16:24" data-active="home">
+      <div class="body"><div class="scroll">
+        <div class="sec-h" style="font-size:22px;font-weight:800;margin:8px 4px 12px">Explore</div>
+
+        <div class="card row-card">
+          <div class="ic star">${star}</div>
+          <div class="rc-body"><div class="rc-title">Astrology</div><div class="rc-sub">Birth chart &amp; predictions</div></div>
+          ${chev}
+        </div>
+
+        <div class="card report-card row-card">
+          <div class="ic moon">${moon}</div>
+          <div class="rc-body">
+            <div class="rc-title">Personalized Cosmic Report</div>
+            <div class="rc-sub">Astrology, numerology and palm reading</div>
+          </div>
+          <span class="badge">NEW</span>
+        </div>
+
+        <div class="card row-card">
+          <div class="ic num">${grid}</div>
+          <div class="rc-body"><div class="rc-title">Numerology</div><div class="rc-sub">Life path &amp; destiny numbers</div></div>
+          ${chev}
+        </div>
+
+        <div class="card row-card">
+          <div class="ic pink">${heart}</div>
+          <div class="rc-body"><div class="rc-title">Compatibility</div><div class="rc-sub">Find your perfect match</div></div>
+          ${chev}
+        </div>
+
+        <div class="card row-card">
+          <div class="ic spark">${spark}</div>
+          <div class="rc-body"><div class="rc-title">Name Destiny</div><div class="rc-sub">Your name's cosmic power</div></div>
+          <span class="badge plus">PLUS</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 2. ASTROLOGY TAB ENTRY -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">2 · Astrology tab entry</div>
+      <div class="row"><span class="tag state">all users</span><span class="tag ep">tab card + tags</span></div>
+      <div class="note">Same card, placed under the Blueprint, with the three value tags from Variant B.</div>
+    </div>
+    <div class="phone" data-time="16:25" data-active="astrology-gold">
+      <div class="body"><div class="scroll">
+        <div class="h-title">Cosmic Guidance</div>
+
+        <div class="card" style="text-align:center;padding:16px 14px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px">Your Cosmic Blueprint</div>
+          <div style="display:flex;justify-content:space-around;margin-bottom:10px">
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Sun</div><div class="zbadge" style="background:#F5B301">${sun}</div><div style="color:#F5B301;font-weight:700;font-size:13px;margin-top:5px">Leo</div></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Moon</div><div class="zbadge" style="background:#16C0A6">♏</div><div style="color:#b98bff;font-weight:700;font-size:13px;margin-top:5px">Scorpio</div></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Rising</div><div class="zbadge" style="background:#3FbF6A">♎</div><div style="color:var(--pink);font-weight:700;font-size:13px;margin-top:5px">Libra</div></div>
+          </div>
+        </div>
+
+        <div class="card report-card" style="margin-top:12px">
+          <div class="row-card">
+            <div class="ic moon">${moon}</div>
+            <div class="rc-body">
+              <div class="rc-title">Personalized Cosmic Report</div>
+              <div class="rc-sub">Astrology, numerology and palm reading</div>
+            </div>
+            <span class="badge">NEW</span>
+          </div>
+          <div class="tags">
+            <span class="pill">Dual-zodiac</span>
+            <span class="pill">Dated timing</span>
+            <span class="pill">Downloadable PDF</span>
+          </div>
+        </div>
+
+        <div class="sec-h">Your Birth Chart</div>
+        <div class="card" style="height:120px;display:grid;place-items:center;color:var(--muted-2);font-size:12px">natal wheel</div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 3. LANDING · PREMIUM, CREDIT AVAILABLE -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">3 · Report hub → Premium, credit available</div>
+      <div class="row"><span class="tag state">premium · 1/1 left</span><span class="tag ep">GET /credit</span><span class="tag ep">POST /reports</span></div>
+      <div class="note">The generate state. Enqueue on tap → 201 → screen 5.</div>
+    </div>
+    <div class="phone" data-time="16:26" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div class="row-card" style="margin:8px 2px 2px">
+          <div class="ic moon" style="width:40px;height:40px;border-radius:12px">${moon}</div>
+          <div class="rc-body"><div style="font-size:17px;font-weight:800">Personalized Cosmic Report</div></div>
+          <span class="badge">NEW</span>
+        </div>
+
+        <div class="hero">One birth, read through two great traditions at once.</div>
+        <p class="lede">A 20 to 24 page reading that fuses Vedic and Western astrology, your dasha timing, transits, and numerology into one dated, downloadable PDF.</p>
+        <div class="tags" style="margin:12px 2px 0">
+          <span class="pill">Dual-zodiac</span><span class="pill">Dated timing</span><span class="pill">Downloadable PDF</span>
+        </div>
+
+        <div class="sec-h">What's inside</div>
+        <div class="inside">
+          <div class="it"><div class="dot"></div><div><div class="it-t">Two charts, one sky</div><div class="it-s">Sidereal and tropical, side by side</div></div></div>
+          <div class="it"><div class="dot"></div><div><div class="it-t">The clock</div><div class="it-s">Dated windows across your life</div></div></div>
+          <div class="it"><div class="dot"></div><div><div class="it-t">Life domains</div><div class="it-s">Health, wealth, relationships</div></div></div>
+          <div class="it"><div class="dot"></div><div><div class="it-t">Number and hand</div><div class="it-s">Numerology and palm, where they agree</div></div></div>
+        </div>
+
+        <div style="text-align:center;margin:16px 0 12px"><span class="chip credit">${checkdot}&nbsp;1 report available this month</span></div>
+        <button class="btn primary">Generate my report</button>
+        <p class="disc">Takes a few minutes. We'll email you and it will appear here when it's ready.<br>For insight and entertainment. Not medical, legal, or financial advice.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 4. LANDING · FREE (PAYWALL) -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">4 · Report hub → Free (locked)</div>
+      <div class="row"><span class="tag state">tier: free · 402</span><span class="tag ep">POST /reports → 402</span></div>
+      <div class="note">Free-locked copy. Sample stays viewable. CTA = upgrade, never "you've used your report".</div>
+    </div>
+    <div class="phone" data-time="16:27" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div class="row-card" style="margin:8px 2px 2px">
+          <div class="ic moon" style="width:40px;height:40px;border-radius:12px">${moon}</div>
+          <div class="rc-body"><div style="font-size:17px;font-weight:800">Personalized Cosmic Report</div></div>
+          <span class="badge">NEW</span>
+        </div>
+
+        <div class="hero">One birth, read through two great traditions at once.</div>
+        <p class="lede">A 20 to 24 page reading that fuses astrology, dasha timing, transits, and numerology into one dated PDF.</p>
+        <div class="tags" style="margin:12px 2px 0">
+          <span class="pill">Dual-zodiac</span><span class="pill">Dated timing</span><span class="pill">Downloadable PDF</span>
+        </div>
+
+        <div style="text-align:center;margin:20px 0 12px"><span class="chip lock">${lock}&nbsp;A Premium feature</span></div>
+        <p class="lede" style="text-align:center;margin-bottom:16px">The Personalized Cosmic Report is part of Premium. Upgrade to generate one full reading every month.</p>
+
+        <button class="btn gold">Unlock with Premium</button>
+        <p class="disc">For insight and entertainment. Not medical, legal, or financial advice.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 5. GENERATING -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">5 · Generating (async)</div>
+      <div class="row"><span class="tag state">status: generating</span><span class="tag ep">poll GET /:id</span></div>
+      <div class="note">Leave-and-return safe. Polls generating → ready. Email fires in parallel.</div>
+    </div>
+    <div class="phone" data-time="16:28" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div class="orbit-wrap"><div class="orbit"><div class="core">${moon}</div></div></div>
+        <div style="text-align:center"><div class="cs-t">Preparing your report</div>
+        <div class="cs-s" style="margin:8px auto 0">We're computing your charts and writing your reading. This usually takes a few minutes.</div></div>
+
+        <div class="steps" style="margin-top:22px">
+          <div class="s done"><span class="tick done">✓</span>Computing your charts</div>
+          <div class="s now"><span class="tick now">●</span>Writing your reading</div>
+          <div class="s"><span class="tick wait">·</span>Building your PDF</div>
+        </div>
+
+        <div class="card" style="margin-top:18px;background:#12121b">
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.5">You can close this screen. We'll email you when it's ready, and it will be waiting here in your reports.</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 6. READY -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">6 · Ready</div>
+      <div class="row"><span class="tag state">status: ready</span><span class="tag ep">GET /:id → open secureLink</span></div>
+      <div class="note">"Open report" fetches a fresh 1h link on tap. <b>headline</b> = <code>highlights.headline</code>.</div>
+    </div>
+    <div class="phone" data-time="16:29" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div style="text-align:center;margin-top:10px">
+          <div class="cs-ic moon" style="margin:0 auto 14px;width:58px;height:58px">${moon}</div>
+          <div class="cs-t">Your report is ready</div>
+        </div>
+        <div class="hero" style="text-align:center;font-size:18px;margin:14px 6px 4px">"A chapter closes, a bigger one opens."</div>
+        <div class="metarow" style="justify-content:center">
+          <span>20 pages</span><span>Jul 22, 2026</span><span>Swiss Ephemeris</span>
+        </div>
+
+        <button class="btn primary">${download}&nbsp;Open report (PDF)</button>
+        <button class="btn ghost small" style="margin-top:10px">${share}&nbsp;Share</button>
+
+        <div class="sec-h">In this reading</div>
+        <div class="inside" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:4px 12px">
+          <div class="it"><div class="dot"></div><div class="it-t">Two Charts, One Sky</div></div>
+          <div class="it"><div class="dot"></div><div class="it-t">The Person</div></div>
+          <div class="it"><div class="dot"></div><div class="it-t">The Clock</div></div>
+          <div class="it"><div class="dot"></div><div class="it-t">Life Domains</div></div>
+          <div class="it"><div class="dot"></div><div class="it-t">The Decades</div></div>
+          <div class="it"><div class="dot"></div><div class="it-t">Number and Hand</div></div>
+        </div>
+        <p class="save-note">Saved to your reports for 60 days. Reopen it anytime.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 7. HISTORY -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">7 · Your reports (history)</div>
+      <div class="row"><span class="tag state">list</span><span class="tag ep">GET /reports</span></div>
+      <div class="note">Link-less list (no presign fan-out). Status pill per item. Tap → the matching hub state.</div>
+    </div>
+    <div class="phone" data-time="16:30" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div class="h-title sm">Your reports</div>
+        <div style="text-align:center;margin:2px 0 14px"><span class="chip cap">Next report unlocks Aug 1</span></div>
+
+        <div class="hist">
+          <div class="h">
+            <div class="ic moon" style="width:38px;height:38px;border-radius:11px">${moon}</div>
+            <div class="h-body"><div class="h-m">July 2026</div><div class="h-t">A chapter closes, a bigger one opens</div></div>
+            <span class="status ready">READY</span>
+          </div>
+          <div class="h">
+            <div class="ic moon" style="width:38px;height:38px;border-radius:11px;opacity:.55">${moon}</div>
+            <div class="h-body"><div class="h-m">May 2026</div><div class="h-t">The forge before the harvest</div></div>
+            <span class="status exp">EXPIRED</span>
+          </div>
+          <div class="h">
+            <div class="ic moon" style="width:38px;height:38px;border-radius:11px;opacity:.55">${moon}</div>
+            <div class="h-body"><div class="h-m">April 2026</div><div class="h-t">Networks, seniors, and the slow climb</div></div>
+            <span class="status exp">EXPIRED</span>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 8. PAID CAP USED -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">8 · Paid cap used this month</div>
+      <div class="row"><span class="tag state">tier: premium · 402</span><span class="tag ep">resetsAt</span></div>
+      <div class="note">Distinct from free-lock: no upgrade CTA. Routes to this month's existing report.</div>
+    </div>
+    <div class="phone" data-time="16:31" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div class="row-card" style="margin:8px 2px 2px">
+          <div class="ic moon" style="width:40px;height:40px;border-radius:12px">${moon}</div>
+          <div class="rc-body"><div style="font-size:17px;font-weight:800">Personalized Cosmic Report</div></div>
+        </div>
+
+        <div class="center-state" style="padding-top:22px">
+          <div class="cs-ic dim">${calendar}</div>
+          <div class="cs-t">You've used this month's report</div>
+          <div class="cs-s">Your next Personalized Cosmic Report unlocks on <b style="color:var(--text)">August 1</b>. Your July reading is saved and ready to reopen.</div>
+        </div>
+
+        <button class="btn primary" style="margin-top:26px">${download}&nbsp;Open July's report</button>
+        <button class="btn ghost small" style="margin-top:10px">View all reports</button>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 9. EXPIRED -->
+  <div class="screen">
+    <div class="cap">
+      <div class="name">9 · Expired → rebuild (free)</div>
+      <div class="row"><span class="tag state">expired: true</span><span class="tag ep">POST regenerate → poll</span></div>
+      <div class="note"><b>Owner-greenlit route:</b> rebuilds the PDF from the stored interpretation. No re-Fable, no credit. Reuses the polling UI.</div>
+    </div>
+    <div class="phone" data-time="16:32" data-active="astrology">
+      <div class="body"><div class="scroll">
+        <div class="center-state" style="padding-top:40px">
+          <div class="cs-ic moon">${clock}</div>
+          <div class="cs-t">This report's download expired</div>
+          <div class="cs-s">Downloadable PDFs are kept for 60 days. Your full reading is saved, so we can rebuild this PDF for you at no cost.</div>
+        </div>
+        <button class="btn primary" style="margin-top:26px">${download}&nbsp;Rebuild my PDF (free)</button>
+        <p class="save-note" style="margin-top:10px">This doesn't use your monthly report.</p>
+        <button class="btn ghost small" style="margin-top:12px">Back to your reports</button>
+      </div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* icon library */
+const I = {
+  moon:'<svg viewBox="0 0 24 24" fill="none"><path d="M15.5 3.2a8.5 8.5 0 1 0 5.3 14.2A7 7 0 0 1 15.5 3.2z" fill="#fff"/><path d="M18.5 4.5l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4L16.6 6.4l1.4-.5z" fill="#FCE38A"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="#FCD34D"><path d="M12 2l2.6 6.3L21 9l-4.9 4.2L17.6 20 12 16.3 6.4 20l1.5-6.8L3 9l6.4-.7L12 2z"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.5-9.3-9C1 8.5 3 5.5 6.2 5.5c2 0 3.2 1.2 3.8 2.2.6-1 1.8-2.2 3.8-2.2C21 5.5 23 8.5 21.3 12 19 16.5 12 21 12 21z"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l1.7 5.5L19 9l-5.3 1.5L12 16l-1.7-5.5L5 9l5.3-1.5L12 2z"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="4.5"/></svg>',
+  chev:'<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>',
+  eye:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  checkdot:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>',
+  lock:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  download:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg>',
+  share:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.7l7.4-4.4M8.3 13.3l7.4 4.4"/></svg>',
+  calendar:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8B7BF7" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>',
+  clock:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8A8A97" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+};
+/* nav icons */
+const NAV=[
+  ['home','Home','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>'],
+  ['readings','Readings','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg>'],
+  ['numbers','Numbers','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01"/></svg>'],
+  ['astrology','Astrology','<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.2 5.4L20 9l-4.3 3.7L17 18l-5-3-5 3 1.3-5.3L4 9l5.8-.6z"/></svg>'],
+  ['match','Match','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20s-6.5-4-9-8C1.5 9 3 6 6 6c1.8 0 3 1 3.7 2C10.4 7 11.6 6 13.4 6c3 0 4.5 3 3 6-2.5 4-9 8-9 8z"/></svg>'],
+  ['profile','Profile','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>'],
+];
+
+/* fill icon placeholders (${name}) inside content containers ONLY,
+   so the <script> text is never touched and buildChrome stays intact */
+['.notes','.gallery'].forEach(sel=>{
+  const el=document.querySelector(sel);
+  if(el) el.innerHTML = el.innerHTML.replace(/\$\{(\w+)\}/g,(m,k)=>I[k]||'');
+});
+
+function buildChrome(){
+  document.querySelectorAll('.phone').forEach(p=>{
+    const time = p.getAttribute('data-time')||'16:24';
+    let active = p.getAttribute('data-active')||'';
+    const gold = active.endsWith('-gold');
+    active = active.replace('-gold','');
+
+    // status bar
+    const sb=document.createElement('div');
+    sb.className='sbar';
+    sb.innerHTML=`<span>${time}</span><span class="rt">
+      <svg width="16" height="11" viewBox="0 0 18 12" fill="#e9e9f2"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 18 14" fill="#e9e9f2"><path d="M9 3.5c2.2 0 4.2.8 5.7 2.2l1.4-1.5A10.4 10.4 0 0 0 9 1.4 10.4 10.4 0 0 0 1.9 4.2l1.4 1.5A8.3 8.3 0 0 1 9 3.5zM9 7.2c1.2 0 2.3.45 3.1 1.2l1.4-1.5A7 7 0 0 0 9 5.1a7 7 0 0 0-4.5 1.8l1.4 1.5A4.6 4.6 0 0 1 9 7.2zM9 10.8l1.9-2a2.7 2.7 0 0 0-3.8 0z"/></svg>
+      <svg width="24" height="12" viewBox="0 0 26 13" fill="none"><rect x="1" y="1" width="21" height="11" rx="2.5" stroke="#e9e9f2"/><rect x="3" y="3" width="15" height="7" rx="1" fill="#e9e9f2"/><rect x="23" y="4" width="2" height="5" rx="1" fill="#e9e9f2"/></svg>
+    </span>`;
+    p.insertBefore(sb, p.firstChild);
+
+    // bottom nav
+    const nav=document.createElement('div');
+    nav.className='nav';
+    nav.innerHTML = NAV.map(([id,label,svg])=>{
+      const on = id===active;
+      const cls = 't'+(on?' active':'')+(on&&gold?' gold':'');
+      return `<div class="${cls}">${svg}<span>${label}</span></div>`;
+    }).join('');
+    const handle=document.createElement('div'); handle.className='handle';
+    p.appendChild(nav); p.appendChild(handle);
+  });
+}
+buildChrome();
+</script>
+</body>
+</html>

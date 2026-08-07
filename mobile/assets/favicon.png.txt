@@ -1,0 +1,2 @@
+Placeholder for web favicon
+Replace with actual favicon before deployment

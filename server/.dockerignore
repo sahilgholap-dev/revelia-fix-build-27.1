@@ -1,0 +1,25 @@
+# Build artifacts + deps rebuilt inside the image (never copy host copies — they
+# may be the wrong platform/arch, esp. the native .node binaries for sweph/bcrypt).
+node_modules
+dist
+
+# VCS / local tooling
+.git
+.gitignore
+.eslintrc*
+.vscode
+.idea
+
+# Env + secrets (Railway injects env at runtime; never bake into the image)
+.env
+.env.*
+*.local
+
+# Logs / OS cruft
+npm-debug.log*
+*.log
+.DS_Store
+
+# Docker itself
+Dockerfile
+.dockerignore

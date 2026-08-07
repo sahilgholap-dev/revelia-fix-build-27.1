@@ -1,0 +1,123 @@
+{
+  "expo": {
+    "name": "Revelia",
+    "slug": "revelia",
+    "version": "2.1.0",
+    "scheme": "revelia",
+    "owner": "spronline",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "jsEngine": "hermes",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#100E0D"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.revelia.app",
+      "buildNumber": "5",
+      "usesAppleSignIn": true,
+      "jsEngine": "hermes",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Revelia needs camera access to capture face and palm photos for your personalized AI readings.",
+        "NSPhotoLibraryUsageDescription": "Revelia needs photo library access to let you upload existing face and palm photos for your AI readings.",
+        "NSFaceIDUsageDescription": "Revelia uses Face ID to secure your account and readings.",
+        "NSLocationWhenInUseUsageDescription": "Revelia uses your location to enhance the accuracy of your astrological readings and birth chart calculations based on your current position.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#100E0D"
+      },
+      "package": "com.revelia.app",
+      "versionCode": 26,
+      "jsEngine": "hermes",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "production"
+        }
+      ],
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Revelia to access your camera for face and palm readings."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Revelia to access your photos for readings."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Revelia uses your approximate (city-level) location to time your reading to where you are. You can decline and we'll use your birth city instead.",
+          "isAndroidForegroundServiceEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "https://revelia-backend-production.up.railway.app/api",
+      "eas": {
+        "projectId": "6e0a3685-c2a4-4276-94d3-7ad9f46637cf"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6e0a3685-c2a4-4276-94d3-7ad9f46637cf",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_ERROR_RECOVERY"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}

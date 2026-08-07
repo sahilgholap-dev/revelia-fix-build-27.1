@@ -1,0 +1,74 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote",
+    "requireCommit": true
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8001/api",
+        "EXPO_PUBLIC_ENV": "development"
+      },
+      "channel": "development"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://revelia-backend-production.up.railway.app/api",
+        "EXPO_PUBLIC_ENV": "preview",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_UrIHoNOvoawPfJvzgIjGijgUfYa",
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "b7e152c6-1fe6-4e7d-af90-2e097946dbaf",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "530984023588-uq36tvq7gbbmrjobh4dc5m995rmpl75o.apps.googleusercontent.com"
+      },
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "ios": {
+        "simulator": false,
+        "image": "latest"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.revelia.me/api",
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_UrIHoNOvoawPfJvzgIjGijgUfYa",
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "b7e152c6-1fe6-4e7d-af90-2e097946dbaf",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "530984023588-uq36tvq7gbbmrjobh4dc5m995rmpl75o.apps.googleusercontent.com"
+      },
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "sid@revelia.me",
+        "ascAppId": "6762566575",
+        "appleTeamId": "7MF4U8534H"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}

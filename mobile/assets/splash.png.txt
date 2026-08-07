@@ -1,0 +1,3 @@
+Placeholder for splash screen
+Dark background (#0A0A0F) with "Revelia" text
+Replace with actual splash before deployment

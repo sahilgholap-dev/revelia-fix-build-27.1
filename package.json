@@ -1,0 +1,31 @@
+{
+  "name": "revelia",
+  "version": "1.0.0",
+  "description": "AI-Powered Face & Palm Reading Mobile App",
+  "private": true,
+  "scripts": {
+    "mobile": "cd mobile && npm start",
+    "server": "cd server && npm run dev",
+    "build:server": "cd server && npm run build",
+    "build:mobile": "cd mobile && eas build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srcoderz99/revelia.git"
+  },
+  "keywords": [
+    "face-reading",
+    "palm-reading",
+    "ai",
+    "mobile-app",
+    "react-native",
+    "expo"
+  ],
+  "author": "Sid (srcoderz99)",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  }
+}

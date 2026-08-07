@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Revelia pre-push gate — codemod-plan.md §1.2 item 7 / owner action P22.
+#
+# Zero new dependencies (no husky), tracked in git, one line to enable per clone:
+#     git config core.hooksPath .githooks
+#
+# 🔴 READ THIS BEFORE TRUSTING IT — codemod-plan.md §4.1 and §4.6.
+#    This hook is the ONLY automated enforcement in the entire repository. There is no CI,
+#    no test runner, and before pass 0 there were no hooks at all. And it is defeated by:
+#      · `git push --no-verify`            — one flag, no record
+#      · a fresh clone                     — core.hooksPath is LOCAL config, never cloned
+#      · pushing from any other machine     — same reason
+#    So the gate is ADVISORY BY CONSTRUCTION, and every identity claim in the codemod plan
+#    rests on a check nobody is forced to run. That is stated plainly rather than implied.
+#
+# What it does NOT do: it does not run scripts/resolve-utilities.js --diff. That check is
+# inherently two-snapshot (before/after a pass), so it cannot be expressed as a single
+# pre-push invocation — it belongs to the per-pass ritual in §3.0.1, run by a human.
+set -e
+cd "$(git rev-parse --show-toplevel)/mobile"
+
+# ── BLOCKING: both tsc gates. Clean today (0 errors ×2), so they are enforceable now. ──
+echo "pre-push: npx tsc --noEmit (mobile)"
+npx tsc --noEmit
+
+echo "pre-push: npx tsc --noEmit (server)"
+(cd ../server && npx tsc --noEmit)
+
+# ── 🟢 BLOCKING FROM PASS 5 (2026-07-31). GATE_STRICT IS NOW DEFAULT-ON. ──────────────
+#
+# 🔴 IT WAS REPORT-ONLY FOR A REASON, AND THAT REASON HAS EXPIRED. From pass 0 to pass 5 the
+#    token gate exited NONZERO BY DESIGN — counting the ~4,220 sites still to migrate was its
+#    whole job — so blocking on it would have failed EVERY push for the duration of the
+#    revamp, starting with the pass-0 commit itself. That is a lockout, not a gate, and a
+#    lockout gets defeated with `--no-verify` on the first day and then never re-armed.
+#
+# 🟢 As of pass 5 every decreasing counter has either reached 0 or become a NAMED, PRINTED,
+#    SCOPED residue that the script subtracts itself and re-reports every run:
+#      · no-raw-hex          0 live · 11 hex + 1 rgba excepted in BirthChartWheel (§11.4)
+#      · no-numeric-fontsize 0 live · 60 GLYPH + 7 ABOVE-CEILING, marked IN-FILE
+#      · no-variable-fontsize  11, permanently report-only (O-29 watchlist)
+#    ⬜ and TWO counters are PENDING rather than clean — 177 legacy radii (pass 3b) and 6
+#      dead spacing classes (pass 3a), which the owner's reorder moved AFTER pass 5. They
+#      print on every run attributed to their owning pass and do NOT block; see the gate
+#      script's GP() comment for why both alternatives were worse.
+#    So a nonzero exit now means a genuine REGRESSION, and the gate has earned the right to
+#    block. `GATE_STRICT=1` is no longer needed and is accepted as a no-op for muscle memory.
+#
+# 🔴 THE ESCAPE HATCH IS DELIBERATE AND IT IS *NOT* `--no-verify`: `GATE_LENIENT=1 git push`
+#    reports instead of blocking. The difference that matters is that it leaves a trace on the
+#    command line and in shell history, and the gate prints a line telling you to say why in
+#    the commit body. `--no-verify` leaves nothing at all. Give people a labelled door and
+#    they use it instead of the unlabelled one.
+echo "pre-push: bash scripts/token-gate.sh"
+if bash scripts/token-gate.sh; then
+  exit 0
+fi
+
+echo "pre-push: token gate FAILED — a rule is over its floor. Blocking push." >&2
+echo "          Read the numbers above; paste them into the commit body either way (§4.6)." >&2
+echo "          Deliberate override, leaves a trace:  GATE_LENIENT=1 git push" >&2
+exit 1

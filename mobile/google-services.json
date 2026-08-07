@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "530984023588",
+    "project_id": "revelia-497203",
+    "storage_bucket": "revelia-497203.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:530984023588:android:b1e0abd7e0d641c4f98ab1",
+        "android_client_info": {
+          "package_name": "com.revelia.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "530984023588-uq36tvq7gbbmrjobh4dc5m995rmpl75o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-B1LIA_KQk3LA8PNqRWexoRgRbAnNujQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "530984023588-uq36tvq7gbbmrjobh4dc5m995rmpl75o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
