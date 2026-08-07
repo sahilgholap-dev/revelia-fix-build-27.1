@@ -8,6 +8,65 @@
 
 **Tech Stack:** Expo SDK 53 · react-native-web ~0.20 · react-dom 19.0.0 · @expo/metro-runtime · NativeWind 4 (CSS output on web) · @revenuecat/purchases-js (Web Billing) · OneSignal Web SDK v16 (optional phase) · Google Identity Services (web sign-in) · Cloudflare Pages (hosting) · hand-rolled service worker (no workbox dependency).
 
+---
+
+# 🟢 EXECUTION STATUS — updated 2026-08-07 after Phases 0, 1 and 4 were built and measured
+
+**Done and verified:** Phase 0 (setup) · Phase 1 (all platform forks) · Task 10 (the fork gate) ·
+Phase 4 Tasks 15–16 (PWA shell, manifest, icons, service worker, offline launch).
+**Remaining:** Task 12 (camera on web) · Task 13/14 (paywall + Web Billing) · Task 17 (install
+prompt + hosting) · Task 18 (web push) · Task 19 (CORS — **blocking, see below**) · Tasks 20–21.
+
+**Verification standing green:** mobile `tsc` 0 · server `tsc` 0 · `npm run gate` exit 0 ·
+`web-fork-check` PASS · `resolve-utilities --diff` 0 rules moved of 200 · `--members` 0 unresolved ·
+`expo export --platform web` succeeds · headless Chrome: welcome renders, funnel navigates,
+0 console errors · manifest + 4 icons + iOS meta present · service worker activated ·
+**offline relaunch renders the app**. Web bundle 4.06 MB → 3.01 MB.
+
+### 🔴 Corrections the plan got wrong, each found by measurement
+
+| # | The plan said | The measured truth |
+|---|---|---|
+| 1 | `+html.tsx` is the web document shell | **It is inert for `output: "single"`** — only `static`/`server` render it. The CLI reads **`public/index.html`** and silently falls back to its own template. A `+html.tsx` produced the default HTML with every PWA tag missing, no error, no warning. |
+| 2 | Native imports break the *bundle* | **The bundle builds fine.** `expo export` succeeded with every native package still in the graph; the failure is at RUNTIME. So the bundler is not a witness — which is the entire argument for `web-fork-check`. |
+| 3 | A bad import breaks its own screen | **Expo Router eagerly requires every route file**, so one native import in one screen white-screens the WHOLE app before React mounts, reporting only `<ContextNavigator>`. |
+| 4 | `expo-haptics` needs a fork / 25 guards | **It ships a web implementation.** No fork, no guards. Same for `expo-store-review` (already `Platform.OS`-guarded) and `expo-application`. |
+| 5 | `expo-secure-store` and `react-native-purchases` crash on import | They do **not** — they fail at CALL time. The four that crash at import are onesignal, share, view-shot, datetimepicker (TurboModule specs). |
+| 6 | `shareReadingCard(viewRef, message)` | Real signature is **`(viewRef)` only**; the footer is internal. Also `cosmic-report.tsx` had its own RNShare + `FileSystem.downloadAsync` block, extracted to `utils/shareReportPdf.ts`. |
+| 7 | Make `api.ts` env-first (Task 19 step 2) | 🔴 **DO NOT.** `api.ts` already falls back `extra.apiUrl → EXPO_PUBLIC_API_URL → hardcoded`, and `eas.json` sets `EXPO_PUBLIC_API_URL` in **all three** profiles. Reordering would silently repoint the **native production app** from the Railway URL to `api.revelia.me`. Web inherits `extra.apiUrl` and needs no change. |
+| 8 | Metro/NativeWind web wiring must be added | Already present: `global.css` exists, is imported by `_layout.tsx`, and `metro.config.js` already passes it with `inlineRem: 16`. |
+
+### 🔴 Findings that are not plan corrections but matter
+
+- **CORS is confirmed blocking, with evidence.** Preflight to the live API: `https://revelia.me` →
+  `access-control-allow-origin` present; **`https://app.revelia.me` → header absent**; localhost →
+  absent. **Task 19 is mandatory before any browser can talk to the backend.**
+- **A latent production defect, unrelated to web:** because `extra.apiUrl` wins over the env var,
+  the `production` EAS profile's `https://api.revelia.me/api` has never taken effect — the shipped
+  Android app talks to the Railway URL. Not touched; recorded for the owner.
+- **`resolve-utilities.js` could not run on Windows** when the checkout path contains a space or
+  parentheses (`shell:true` re-parses; cmd.exe treats `( )` as grouping). It threw with no stderr,
+  silently disabling the one instrument that satisfies `O-69`. Fixed by quoting.
+- **Three existing gates correctly objected to the forks and were extended, never weakened** —
+  `family-arrival` caught a real de-emphasis defect in the new web field; `invariant-register`'s
+  X6/X21 gained the `.web` sibling as a second legal home (and `web-fork-check` now asserts the two
+  match name-for-name, so the pair is stricter than X6 alone); `primitive-adoption`'s
+  `border-control` census moved 16 → 17 for a genuinely new control.
+- **Three service-worker defects were found by measurement**, all invisible to `tsc` and the
+  bundler: the worker never registered (listener attached after `load` had already fired, because
+  Expo Router loads the root layout asynchronously); the offline shell had no JavaScript (hashed
+  entry bundle is requested before the worker activates); and a 404 could poison the offline shell
+  permanently (an SPA reload lands on a client-side path, and that 404 was cached *as the app*).
+
+### New files not in the original plan
+
+`utils/shareReportPdf.ts` + `.web.ts` · `lib/registerSw.ts` + `.web.ts` · `lib/secureStorage.ts` +
+`.web.ts` (adapter keeps expo-secure-store's own export names, so consumers changed one import line
+and no bodies) · `scripts/web-fork-check.js` · `scripts/stamp-sw.js` · `scripts/serve-web.js` ·
+`public/{index.html,manifest.json,sw.js,_redirects,icons/*}`.
+
+---
+
 ## Global Constraints
 
 - **Work in the real git clone.** The `revelia-fix-build-27.1 (1)` directory is an extracted zip with no `.git`. Nothing in this plan can be committed or deployed from it.

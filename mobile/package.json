@@ -9,7 +9,11 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "gate": "bash scripts/token-gate.sh"
+    "gate": "bash scripts/token-gate.sh",
+    "web:stamp-sw": "node scripts/stamp-sw.js",
+    "web:export": "npm run web:stamp-sw && expo export --platform web",
+    "web:serve": "node scripts/serve-web.js",
+    "web:deploy": "npm run web:export && npx wrangler pages deploy dist --project-name revelia-web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.5",
