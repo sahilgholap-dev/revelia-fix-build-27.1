@@ -66,6 +66,11 @@ export function DateTimeField({
 
   const base = value instanceof Date && !isNaN(value.getTime()) ? value : new Date();
 
+  // Take the whole step from txt() rather than naming a family: text-base
+  // resolves to body-semi, and hardcoding t.family.body here de-emphasised the
+  // control by one rank. family-arrival-check caught exactly that.
+  const step = t.txt('text-base').style;
+
   return createElement('input', {
     ref,
     type: mode === 'time' ? 'time' : 'date',
@@ -98,8 +103,14 @@ export function DateTimeField({
       padding: t.space[3],
       marginTop: t.space[2],
       width: '100%',
-      fontFamily: t.family.body,
-      fontSize: t.type['text-base'].size,
+      fontFamily: step.fontFamily,
+      fontSize: step.fontSize,
+      letterSpacing: step.letterSpacing,
+      // px STRING, deliberately. A bare number is unitless in CSS, so react-dom
+      // would emit line-height:22 — twenty-two TIMES the font size — where RN
+      // reads the same number as 22dp. One of the few places the two style
+      // dialects disagree silently.
+      lineHeight: `${step.lineHeight}px`,
       // Tells the browser to paint its picker chrome for a dark ground.
       colorScheme: 'dark',
     },

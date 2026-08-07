@@ -711,6 +711,31 @@ echo "── brand-assets ──"
 # rather than at the next store review.
 if node scripts/check-brand-assets.js; then :; else fail=1; fi
 
+echo "── web platform forks ──"
+# 🔴 THE TWENTY-FOURTH NAMED RULE, WIRED IN WITH THE EXPO-WEB / PWA WORK — and it guards a seam
+#    that is INVISIBLE IN SOURCE. The web build keeps native-only packages out of the bundle purely
+#    by Metro's platform resolution (`foo.web.ts` beats `foo.ts` when platform=web). Nothing in the
+#    source declares that a fork is required, and nothing fails at author time when one is missing.
+#
+# 🔴 WHY IT HAD TO BE A GATE RATHER THAN CARE: four of these packages call
+#    `TurboModuleRegistry.getEnforcing` AT IMPORT TIME, react-native-web does not export
+#    TurboModuleRegistry, and Expo Router EAGERLY REQUIRES EVERY ROUTE FILE. So one bad import in
+#    one screen does not break that screen — it white-screens the WHOLE web app before React mounts,
+#    reporting only `<ContextNavigator>`. Diagnosing it from the symptom costs hours.
+#
+# 🔴 AND NOTE WHICH INSTRUMENTS CANNOT SEE IT — all of them. `tsc` is clean (both files typecheck),
+#    every grep above is clean (there is no token involved), and `expo export --platform web`
+#    SUCCEEDS: measured during the conversion, a clean export and a white screen on the same commit.
+#    The bundler is not a witness here, which is exactly the `--diff` situation one layer over.
+#
+# Two assertion classes: COVERAGE (a native-only import must have a .web sibling) and EXPORT PARITY
+# (the sibling must export every name the native file does). Parity is the quiet half: Metro swaps
+# the whole MODULE, so a fork missing one export builds fine, typechecks fine, and dies on web only
+# as "X is not a function" — the shape of the expo-secure-store failure this seam was built to fix.
+# Both classes were defect-injected before wiring: coverage FAILs on a removed sibling, parity FAILs
+# on a renamed export, and a package named in PROSE ONLY does not trip either (comments are stripped).
+if node scripts/web-fork-check.js; then :; else fail=1; fi
+
 echo "── text-defaults-installed ──"
 # 🔴 THE SIXTEENTH NAMED RULE, AND THE SECOND ONE THAT IS NOT REALLY A GREP OVER $SRC — it is a
 #    single-file existence check, like the lib/colors.ts clause above. Added in pass 4 (E0).

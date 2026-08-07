@@ -254,17 +254,28 @@ const REGISTER = [
         'ONE exported dismissal test. Every per-file redefinition drifts from it.'],
     ],
     wide: [
-      [/\bshareReadingCard\s*\(/, 4,
-        'the declaration plus THREE call sites. This is the denominator of the gating assertion ' +
-        'below and it is stated separately so the pair can be compared.'],
+      [/\bshareReadingCard\s*\(/, 5,
+        'TWO declarations plus THREE call sites. This is the denominator of the gating assertion ' +
+        'below and it is stated separately so the pair can be compared. ' +
+        '⚠️ WAS 4 (one declaration) UNTIL THE WEB FORK: utils/shareReading.web.ts declares the ' +
+        'same function for the web bundle, because Metro substitutes the whole MODULE at platform ' +
+        'resolution. 5 = 2 declarations + 3 call sites; the call sites did NOT move.'],
       [/=\s*await\s+shareReadingCard\s*\(/, 3,
-        '🔴 ALL THREE CALL SITES CAPTURE THE RETURN, and the two numbers are 4 = 1 + 3. A call ' +
-        'site that drops the assignment leaves the first count at 4 and moves this one to 2, so ' +
-        'the divergence is the finding. That is the closest a census gets to a data-flow property.'],
+        '🔴 ALL THREE CALL SITES CAPTURE THE RETURN, and the two numbers are 5 = 2 + 3. A call ' +
+        'site that drops the assignment leaves the first count at 5 and moves this one to 2, so ' +
+        'the divergence is the finding. That is the closest a census gets to a data-flow property. ' +
+        'Note the fork does NOT weaken this half: a platform fork adds declarations, never call ' +
+        'sites, so THIS number is the one that still moves alone when a caller drops the capture.'],
     ],
     elsewhere: [
-      [/function isShareDismissal/, ['utils/shareReading.ts'],
-        'a per-file copy of the dismissal test. The register says import it, never redefine it.'],
+      [/function isShareDismissal/, ['utils/shareReading.ts', 'utils/shareReading.web.ts'],
+        'a per-file copy of the dismissal test. The register says import it, never redefine it. ' +
+        '⚠️ THE WEB FORK IS THE ONE LEGITIMATE SECOND HOME, and it is a different thing from the ' +
+        'drift this rule exists to stop: a per-SCREEN copy is a second policy, whereas a .web ' +
+        'sibling is the SAME policy compiled for the other platform — the two are never in one ' +
+        'bundle. The pairing is not taken on trust either: scripts/web-fork-check.js asserts the ' +
+        "fork's export set matches the native module name-for-name, so the two rules together are " +
+        'stricter than this one was alone. Any THIRD home still fails here.'],
     ],
     residual:
       'That each caller GATES its meaningful-action record on the captured boolean is a data-flow ' +
@@ -595,10 +606,16 @@ const REGISTER = [
         'authStore writes SERVER-SOURCED users by construction (login / restore / getMe), and ' +
         'subscriptionStore is the one place a tier is mirrored. A third writer anywhere else is a ' +
         'third policy about who decides entitlement.'],
-      [/mapCustomerInfoToTier/, ['lib/revenuecat.ts', 'store/subscriptionStore.ts'],
+      [/mapCustomerInfoToTier/, ['lib/revenuecat.ts', 'lib/revenuecat.web.ts', 'store/subscriptionStore.ts'],
         '🔴 THE DERIVATION ITSELF IS CONFINED. A screen that maps CustomerInfo to a tier is a screen ' +
         'deciding entitlement, and it would be reviewed as one line of convenience. Its home is the ' +
-        'wrapper that defines it plus the one store that is allowed to be optimistic with it.'],
+        'wrapper that defines it plus the one store that is allowed to be optimistic with it. ' +
+        '⚠️ lib/revenuecat.web.ts is the PLATFORM FORK of the wrapper, not a third policy — Metro ' +
+        'picks exactly one of the two per bundle. It returns a constant \'free\' because the web ' +
+        'client cannot see store entitlements until Web Billing lands, and that is SAFE here for ' +
+        'the same reason X21 exists: the rank guard above means a derived tier can only UPGRADE, ' +
+        'so a web \'free\' can never clobber a server-granted or comped tier. The web bundle ' +
+        'therefore relies on GET /subscription/status alone, which is the authority anyway.'],
     ],
     residual:
       "Whether RevenueCat's native SDK emits a CustomerInfo update on its INITIAL fetch is not " +

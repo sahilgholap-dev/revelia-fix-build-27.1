@@ -2090,14 +2090,22 @@ const TOKENS = [
     //    same commit, which is the forcing function) or a structural border helping itself to a
     //    control role, which is the distinction escaping. `nonzero` would see neither, and would
     //    additionally be satisfiable by the paragraph describing it (O-68's third direction: this
-    //    census reads RAW source, so every comment at all sixteen sites names the role in PROSE and
+    //    census reads RAW source, so every comment at all seventeen sites names the role in PROSE and
     //    never in a spelling this pattern can count — that is not a style choice, it is the reason
     //    the count means anything).
-    exact: 16,
-    owner: 'CLOSED at 16 across 8 files · the field primitive (1) · signup\'s consent checkbox (1) ' +
+    // ⚠️ 16 -> 17 WITH THE WEB DATE/TIME FIELD (components/ui/DateTimeField.web.tsx), and this is
+    //    the forcing function above working as designed rather than an exception to it. The new
+    //    site is a genuinely new CONTROL — a real <input> rendered on web, where the native build
+    //    shows the platform picker — so it is the first of the two rise-cases, not the second. It
+    //    is worth recording WHY a web-only file lands in a census at all: this scan reads source
+    //    text, and a .web sibling is source. Every future platform fork that draws a control will
+    //    move this number the same way, and each one has to say so here.
+    exact: 17,
+    owner: 'CLOSED at 17 across 9 files · the field primitive (1) · signup\'s consent checkbox (1) ' +
            '· birth-data\'s two pseudo-fields + handedness pair (4) · both paywall plan cards (2) ' +
            '· verify-email\'s six-box code entry (1) · name-destiny\'s three hand-rolled fields (3) ' +
-           '· the Q&A composer + Deep-Insight toggle (2) · compatibility\'s two chip rows (2). ' +
+           '· the Q&A composer + Deep-Insight toggle (2) · compatibility\'s two chip rows (2) ' +
+           '· the web date/time field (1). ' +
            'A RISE without this number moving is a structural border taking a control role',
     why: 'design §2 — the control-boundary role, added because neither neutral edge clears WCAG ' +
          '1.4.11\'s 3:1 for a component boundary (1.16 / 1.51) and the surface steps are 1.08 ' +

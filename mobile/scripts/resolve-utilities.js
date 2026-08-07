@@ -61,7 +61,16 @@ function compileCss() {
   const out = path.join(os.tmpdir(), `revelia-gate-${process.pid}.css`);
   const win = process.platform === 'win32';
   const bin = path.join(MOBILE, 'node_modules', '.bin', win ? 'tailwindcss.cmd' : 'tailwindcss');
-  execFileSync(bin, ['-i', './global.css', '-o', out], {
+  // 🔴 QUOTE THE PATHS ON WINDOWS. `shell: win` is required (Node >=20.12 refuses to
+  //    execFileSync a .cmd without a shell), but a shell also RE-PARSES the command string — so an
+  //    unquoted path breaks on a space, and cmd.exe additionally treats ( ) as grouping syntax.
+  //    Measured: a checkout under a directory named with a space AND parentheses made this throw
+  //    "Command failed" with no stderr, which reads as a tailwind failure rather than a quoting
+  //    one. That silently disables the ONE instrument that can see a rule appear from nowhere
+  //    (O-69), on the platform where nothing else would report it. Quoting is a no-op on a clean
+  //    path, so this costs nothing and removes a whole class of environment-dependent blindness.
+  const q = (s) => (win ? `"${s}"` : s);
+  execFileSync(q(bin), ['-i', './global.css', '-o', q(out)], {
     cwd: MOBILE, stdio: ['ignore', 'ignore', 'ignore'], shell: win,
   });
   const css = fs.readFileSync(out, 'utf8');
