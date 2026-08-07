@@ -75,4 +75,31 @@ http
   })
   .listen(PORT, () => {
     console.log(`serve-web: http://localhost:${PORT}  (root ${ROOT}, SPA rewrite on)`);
+
+    // 🔴 THE PHONE-TESTING TRAP, PRINTED BECAUSE IT COSTS AN AFTERNOON OTHERWISE.
+    // A service worker — and therefore PWA installability — requires a SECURE
+    // CONTEXT. Browsers exempt localhost, so installing from this machine works
+    // and looks like proof the PWA is fine. A phone on the LAN hits the address
+    // below over plain http, which is NOT exempt: the worker never registers,
+    // and Android Chrome offers "Create shortcut" (a bookmark) instead of
+    // "Install app". Nothing is wrong with the manifest when that happens.
+    const nets = require('os').networkInterfaces();
+    const lan = Object.values(nets)
+      .flat()
+      .filter((n) => n && n.family === 'IPv4' && !n.internal)
+      .map((n) => n.address);
+
+    if (lan.length) {
+      console.log('');
+      console.log('  On this machine  http://localhost:%d  → installs (localhost is a secure origin)', PORT);
+      for (const ip of lan) {
+        console.log('  From a phone     http://%s:%d  → loads, but will NOT install', ip, PORT);
+      }
+      console.log('');
+      console.log('  To test installation on a real Android device, either:');
+      console.log('    a) chrome://flags → "Insecure origins treated as secure"');
+      console.log('       → add http://%s:%d → Enabled → relaunch Chrome', lan[0], PORT);
+      console.log('    b) put it behind an https tunnel (cloudflared / ngrok / npx localtunnel)');
+      console.log('  Production is https, so this caveat disappears on deploy.');
+    }
   });
