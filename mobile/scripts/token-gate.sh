@@ -736,6 +736,28 @@ echo "── web platform forks ──"
 # on a renamed export, and a package named in PROSE ONLY does not trip either (comments are stripped).
 if node scripts/web-fork-check.js; then :; else fail=1; fi
 
+echo "── web PWA shell ──"
+# 🔴 THE TWENTY-FIFTH NAMED RULE. Everything under `public/` is copied to the deployed site
+#    verbatim and is read by the BROWSER — so it is the one part of the app with no instrument on
+#    it at all: `tsc` never sees it, Metro never sees it, `$SRC` excludes it, and `expo export`
+#    copies whatever is there without an opinion.
+#
+# 🔴 THE BUG THAT FORCED IT, and it is a good argument for the whole class: the shell shipped with
+#    the CLI's own template placeholder intact, so the browser tab read literally "%WEB_TITLE%".
+#    It survived a clean tsc, a clean gate, a successful export, AND a full headless-browser pass
+#    that verified the manifest, all four icons, the iOS install meta, the service worker and an
+#    offline relaunch — because every one of those asked "does the app work?" and not one of them
+#    asked "what does the tab say?". The user saw it before any instrument did.
+#
+# It also pins two SERVICE-WORKER invariants that are safety properties rather than cosmetics:
+# `/api` is never cached (a cached response could show one account's reading to another after a
+# logout, and a cached 402 would lock a user out of content they just paid for), and only a
+# SUCCESSFUL navigation may refresh the stored offline shell (an SPA reload lands on a client-side
+# path, and that 404 was once cached AS the app). Both were reproduced before being fixed.
+# Defect-injected on wiring: the placeholder, a manifest icon missing from disk, and the /api
+# bail-out deleted all FAIL; the file's own comment naming the placeholder does not.
+if node scripts/web-shell-check.js; then :; else fail=1; fi
+
 echo "── text-defaults-installed ──"
 # 🔴 THE SIXTEENTH NAMED RULE, AND THE SECOND ONE THAT IS NOT REALLY A GREP OVER $SRC — it is a
 #    single-file existence check, like the lib/colors.ts clause above. Added in pass 4 (E0).

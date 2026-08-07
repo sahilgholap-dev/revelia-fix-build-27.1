@@ -10,14 +10,19 @@
   produced the default template and every PWA tag below was missing — no error,
   no warning. See @expo/cli getTemplateIndexHtmlAsync.
 
-  The CLI substitutes %LANG_ISO_CODE% and %WEB_TITLE%, then appends the bundle
-  <script> and the stylesheet <link>. Leave both placeholders in place.
+  🔴 DO NOT USE THE %WEB_TITLE% / %LANG_ISO_CODE% PLACEHOLDERS HERE. They belong
+  to the CLI's own bundled template. On the "single" export path the bundle
+  <script> and stylesheet <link> ARE injected into this file, but the two
+  placeholder substitutions are NOT applied — measured: the built page shipped a
+  browser tab reading literally "%WEB_TITLE%". public/ is also copied verbatim
+  into dist/, so which copy wins is not a guarantee worth depending on. Write
+  the real values; this file is ours end to end.
 
   The colour literal below is the brand background, whose source of truth is
   theme.js. It is repeated here because a static HTML shell cannot import the
   theme, the same way app.json repeats it for the splash and adaptive icon.
 -->
-<html lang="%LANG_ISO_CODE%">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -27,7 +32,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover"
     />
-    <title>%WEB_TITLE%</title>
+    <title>Revelia</title>
     <meta name="theme-color" content="#100E0D" />
     <meta
       name="description"
