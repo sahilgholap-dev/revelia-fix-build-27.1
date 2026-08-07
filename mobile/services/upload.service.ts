@@ -1,5 +1,6 @@
 import { api } from '@/lib/api';
 import { UploadResponse } from '@shared/types';
+import { appendImageToFormData } from '@/lib/formDataFile';
 
 export const uploadService = {
   /**
@@ -11,11 +12,10 @@ export const uploadService = {
     // Convert URI to file - always send as JPEG for consistency
     const filename = imageUri.split('/').pop() || 'face.jpg';
 
-    formData.append('image', {
-      uri: imageUri,
-      name: filename,
-      type: 'image/jpeg'
-    } as any);
+    // Platform-forked: RN takes a {uri,name,type} descriptor, the browser needs
+    // a real Blob. See lib/formDataFile.ts — appending the descriptor on web
+    // produces a 151-byte body and a 400 from the server.
+    await appendImageToFormData(formData, 'image', imageUri, filename, 'image/jpeg');
 
     try {
       return await api.post<UploadResponse>('/upload/face', formData, {
@@ -38,11 +38,7 @@ export const uploadService = {
 
     const filename = imageUri.split('/').pop() || 'palm.jpg';
 
-    formData.append('image', {
-      uri: imageUri,
-      name: filename,
-      type: 'image/jpeg'
-    } as any);
+    await appendImageToFormData(formData, 'image', imageUri, filename, 'image/jpeg');
     formData.append('isDominant', String(isDominant));
 
     try {

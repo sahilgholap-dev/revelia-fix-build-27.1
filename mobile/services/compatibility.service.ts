@@ -3,11 +3,14 @@ import Constants from 'expo-constants';
 import { storage } from '@/lib/storage';
 import { api } from '@/lib/api';
 import { CompatibilityReading, CompatibilityOutput } from '@shared/types';
+import { appendImageToFormData } from '@/lib/formDataFile';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL || 'https://revelia-backend-production.up.railway.app/api';
 
-// Helper to create form data from image URI
-function createImageFormData(uri: string, fieldName: string = 'image'): FormData {
+// Helper to create form data from image URI.
+// Async because the web fork has to materialise the blob: URI into real bytes
+// before FormData will carry it — see lib/formDataFile.ts.
+async function createImageFormData(uri: string, fieldName: string = 'image'): Promise<FormData> {
   const formData = new FormData();
   const filename = uri.split('/').pop() || 'partner.jpg';
   const match = /\.(\w+)$/.exec(filename);
@@ -24,11 +27,7 @@ function createImageFormData(uri: string, fieldName: string = 'image'): FormData
   // Ensure filename has a valid extension
   const safeName = mimeTypes[ext] ? filename : `partner.jpg`;
 
-  formData.append(fieldName, {
-    uri,
-    name: safeName,
-    type
-  } as any);
+  await appendImageToFormData(formData, fieldName, uri, safeName, type);
 
   return formData;
 }
@@ -36,7 +35,7 @@ function createImageFormData(uri: string, fieldName: string = 'image'): FormData
 export const compatibilityService = {
   // Upload partner image - uses direct axios to avoid API client Content-Type issues
   async uploadPartnerImage(imageUri: string): Promise<{ url: string; uploadedAt: string }> {
-    const formData = createImageFormData(imageUri);
+    const formData = await createImageFormData(imageUri);
     const token = await storage.getToken();
 
     const response = await axios.post(`${API_URL}/upload/partner`, formData, {

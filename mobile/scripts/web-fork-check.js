@@ -170,9 +170,44 @@ for (const file of files) {
   }
 }
 
+// ── class 2b · parity for EVERY fork pair, not only the native-import ones ───
+// The two classes above are driven by NATIVE_ONLY, so a fork pair that exists
+// for a non-import reason is invisible to them. Several do: formDataFile (RN
+// FormData takes a descriptor, the browser needs a Blob), registerSw (a service
+// worker has no native meaning), DateTimeField (a real <input>). Those are
+// exactly as breakable by a missing export — Metro swaps the whole module
+// either way — so parity is asserted for any .web sibling that exists at all.
+let pairsChecked = 0;
+for (const webFile of files.filter((f) => /\.web\.tsx?$/.test(f))) {
+  const nativeFile = webFile.replace(/\.web\.(tsx?)$/, '.$1');
+  if (!fs.existsSync(nativeFile)) {
+    console.error(
+      `  FAIL [orphan]    ${webFile}\n` +
+        `                   has no non-web sibling, so Metro loads it on web and\n` +
+        `                   NOTHING on native — almost always a rename gone half-done.`,
+    );
+    failures++;
+    continue;
+  }
+  pairsChecked++;
+  const nativeExports = exportNames(nativeFile);
+  const webExports = exportNames(webFile);
+  for (const name of nativeExports) {
+    namesChecked++;
+    if (!webExports.has(name)) {
+      console.error(
+        `  FAIL [parity]    ${webFile}\n` +
+          `                   missing export "${name}" (present in ${nativeFile}).`,
+      );
+      failures++;
+    }
+  }
+}
+
 console.log(`── web-fork-check ──`);
 console.log(`  native-only packages guarded  ${NATIVE_ONLY.length}`);
 console.log(`  forked modules verified       ${forksChecked}`);
+console.log(`  fork pairs verified           ${pairsChecked}`);
 console.log(`  export names matched          ${namesChecked}`);
 console.log(`  failures                      ${failures}`);
 
