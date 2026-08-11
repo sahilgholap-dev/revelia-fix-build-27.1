@@ -118,7 +118,7 @@ export async function mountGoogleButton(
 }
 
 /**
- * Best-effort display fields out of the ID token payload.
+ * Best-effort display name out of the ID token payload.
  *
  * Display/label data only — never trusted for auth. Identity (email, Google
  * subject ID) comes from the server's OWN re-verification of the ID token
@@ -128,11 +128,16 @@ export async function mountGoogleButton(
  * where it fills a new account's display name on first sign-in. That is a
  * profile-content choice, not an identity decision: a forged `name` could
  * only mislabel a display field, never authenticate as someone else.
+ *
+ * Returns `{ name }` only — no `email`. The confirm dialog this decoded for
+ * was `email`'s only reader; it is gone (owner decision, 2026-08-11), and an
+ * unread field left behind gets stale or wrong with the next change nobody
+ * checks it against. Add it back only with a real caller.
  */
-export function profileFromIdToken(idToken: string): { name: string; email: string } {
+export function profileFromIdToken(idToken: string): { name: string } {
   try {
     const payload = idToken.split('.')[1];
-    if (!payload) return { name: '', email: '' };
+    if (!payload) return { name: '' };
     // atob() alone returns a Latin-1 byte string: a non-ASCII name ("अनिल",
     // "José", "李") comes out as mojibake, silently — JSON.parse still
     // succeeds on the mangled bytes. Re-decoding those bytes as UTF-8 is what
@@ -140,9 +145,9 @@ export function profileFromIdToken(idToken: string): { name: string; email: stri
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const json = new TextDecoder().decode(Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)));
     const parsed = JSON.parse(json);
-    return { name: parsed?.name ?? '', email: parsed?.email ?? '' };
+    return { name: parsed?.name ?? '' };
   } catch {
-    return { name: '', email: '' };
+    return { name: '' };
   }
 }
 
