@@ -54,15 +54,18 @@ import * as t from '@/theme';
  * ⚠️ An icon has no accessible name, so it carries one. It is not the visible text, because there
  *    is none.
  *
- * ── optional `onPress` (added 2026-08-11) ─────────────────────────────────────────────────────
+ * ── optional `onPress` (added 2026-08-11, corrected 2026-08-11 after a review finding) ────────
  *
- * `birth-data`'s own entry is reached via two `replace`s in a row (post-auth routing, then this
- * screen), so it never has anything to pop — the guard above correctly renders nothing there,
- * which is invisible rather than merely unhelpful. `onPress` lets a caller name an EXPLICIT
- * destination for exactly that case: when it is supplied, history is irrelevant by construction,
- * so the guard is skipped entirely rather than asked a question whose answer no longer matters.
- * Every caller that omits it keeps today's guarded behaviour unchanged — the five existing
- * adopters do not pass it.
+ * `birth-data` is reached BOTH ways — pushed from the astrology hub and the profile (real
+ * history), AND replaced into by the root layout on first run (none at all, per the class
+ * documented above). 🔴 `onPress` is UNCONDITIONAL, not "for the no-history case": supplying it
+ * skips the guard above outright, on every render, regardless of what `canGoBack()` would have
+ * said. **That is only safe because it hands the destination question to the caller rather than
+ * answering it here** — a caller for a destination that must differ by history (`birth-data`'s
+ * own `handleBack`, which re-checks `canGoBack()` itself and only takes a sign-out path when it
+ * is false) has to make that check itself; `onPress` does not make it for them. A caller with one
+ * fixed destination regardless of history has no such obligation. Every caller that omits
+ * `onPress` keeps today's guarded behaviour unchanged — the five existing adopters do not pass it.
  */
 export function BackButton({
   className,

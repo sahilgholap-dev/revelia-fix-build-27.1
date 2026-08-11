@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { showAlert } from '@/lib/alert';
 import { useRouter } from 'expo-router';
@@ -49,6 +49,9 @@ export default function BirthDataScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showInfoSection, setShowInfoSection] = useState(false);
   const [nameSubmitting, setNameSubmitting] = useState(false);
+  // Guards only the no-history sign-out branch of handleBack (below) — the
+  // pushed-entry branch is a synchronous router.back() and needs no guard.
+  const backInFlight = useRef(false);
 
   // Sun sign reveal state
   const [showReveal, setShowReveal] = useState(false);
@@ -184,26 +187,42 @@ export default function BirthDataScreen() {
     router.replace('/(capture)/face-capture');
   };
 
-  // BackButton's onPress (see components/ui/BackButton.tsx): this screen is
-  // reached via two replaces in a row, so there is nothing to pop — the
-  // destination has to be explicit instead. This is not undo; it ends the
-  // session that got the user here, so a mis-tapped Google account is
-  // recoverable by signing in again rather than gated up front.
+  // BackButton's onPress (see components/ui/BackButton.tsx). 🔴 THIS SCREEN IS REACHED THREE
+  // WAYS, NOT ONE — a review finding 2026-08-11, and getting it wrong signs out an onboarded
+  // user for no reason:
+  //   · PUSHED from Profile's "Update Birth Data" row and from the astrology hub's "Add Birth
+  //     Data" / locked-cell "Edit Profile" — real history, canGoBack() is true. Someone already
+  //     signed in, editing their birth data, changes their mind and taps back. This MUST be a
+  //     plain pop, and must NEVER touch the session — there is nothing to recover from here.
+  //   · REPLACED into by the root layout on first run, with no profile yet — no history at all.
+  //     Only THIS path is the sign-out concern below: a mis-tapped Google account is recoverable
+  //     by signing out and starting over, rather than gated up front.
+  // canGoBack() is what tells the two apart, so it is checked FIRST and unconditionally — before
+  // the sign-out branch, not as an alternative to it.
   const handleBack = async () => {
-    // Order matters: clear the session and Google's auto-select BEFORE
-    // navigating, so landing back on welcome does not silently resume the
-    // account just left.
-    await logout();
-    try {
-      // logout() only signs out of Google on Android; this screen is also
-      // reached by email and Apple sign-ups who never touched Google at all,
-      // and the native fork's signOutGoogle() is not defensive on its own —
-      // wrapped here rather than in lib/googleSignIn.ts.
-      await signOutGoogle();
-    } catch (err) {
-      console.error('Google sign-out error:', err);
+    if (router.canGoBack()) {
+      router.back();
+      return;
     }
-    router.replace('/(auth)/welcome');
+    if (backInFlight.current) return;
+    backInFlight.current = true;
+    try {
+      try {
+        // signOutGoogle() BEFORE logout(), not after: logout() (authStore.ts) ends by calling
+        // router.replace('/(auth)/login') itself, so running this afterward would leave the
+        // login screen mounted — and, on native, visibly displayed — while the real SDK
+        // round-trip runs. logout() only calls signOutGoogle() itself on Android; this screen is
+        // also reached by email and Apple sign-ups who never touched Google at all, and the
+        // native fork's signOutGoogle() is not defensive on its own — wrapped here rather than in
+        // lib/googleSignIn.ts.
+        await signOutGoogle();
+      } catch (err) {
+        console.error('Google sign-out error:', err);
+      }
+      await logout();
+    } finally {
+      backInFlight.current = false;
+    }
   };
 
   const isFormValid = nameValid && birthDate !== null && handedness !== null;
@@ -229,11 +248,13 @@ export default function BirthDataScreen() {
       >
           {/* Header */}
           <View className="pt-6 pb-8">
-            {/* This screen is pushed from the astrology hub and the profile, and it is REPLACED
-                into by the root layout on first run — on that path there is nothing beneath it, so
-                BackButton's own canGoBack() guard would render nothing here. `onPress` gives it an
-                explicit destination instead (handleBack, above): a mis-tapped sign-in is recovered
-                by signing out and returning to welcome, rather than gated before it can happen. */}
+            {/* This screen is pushed from the astrology hub and the profile (real history —
+                BackButton's own canGoBack() guard would render the arrow and a plain pop would be
+                correct there already) AND replaced into by the root layout on first run, with no
+                history at all (the guard would render NOTHING there). `onPress` (handleBack, above)
+                does not replace the guard — it re-checks canGoBack() itself, first, so the pushed
+                case is still a plain pop and only the no-history case runs the sign-out path a
+                mis-tapped sign-in needs to be recoverable rather than gated up front. */}
             <BackButton className="mb-4" onPress={handleBack} />
             {/* 🔴 §17 — this screen's one hero, and the third off-ramp className size the funnel
                 phase retires. §17.3 gives a screen title the display hero where no data hero
