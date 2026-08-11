@@ -313,6 +313,11 @@ const CONTRACTS = [
       //    the unlock control's on-fill pairing is now derived here, once, for every lock in the
       //    app instead of in a style rule per treatment.
       'components/ui/LockShell.tsx',
+      // 🆕 DECLARED — Google Sign-In extraction (2026-08-11). This is the shared Google entry
+      //    point: it renders the primitive so all three auth screens sit at one size step. It
+      //    replaces a hand-rolled touchable that login.tsx carried, which had dropped the fixed
+      //    height and the a11y contract this module exists to pin.
+      'components/auth/GoogleSignInButton.tsx',
     ],
     // 🔴 THE TWO CAMERA SCREENS ARE THE ONLY REAL "MUST NOT", and the reason is not style.
     //    Their controls are a shutter and a gallery affordance: circular, icon-only, sized to the

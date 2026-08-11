@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { BackButton } from '@/components/ui/BackButton';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { useAuthStore } from '@/store/authStore';
 import * as t from '@/theme';
 
@@ -220,15 +221,7 @@ export default function Login() {
                 it is, GSI refuses with origin_mismatch and the catch surfaces a "Sign In
                 Failed" dialog — honest, but not working. */}
             {(Platform.OS === 'android' || Platform.OS === 'web') && (
-              <TouchableOpacity
-                onPress={handleGoogleSignIn}
-                className="w-full rounded-pill items-center justify-center border border-border-strong"
-                style={{ backgroundColor: t.color.surface, paddingVertical: 14 }}
-              >
-                <Text className="text-base font-body-semi text-fg">
-                  Sign in with Google
-                </Text>
-              </TouchableOpacity>
+              <GoogleSignInButton onPress={handleGoogleSignIn} />
             )}
           </View>
 

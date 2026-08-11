@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { GrainLayer } from '@/components/ui/GrainLayer';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { useAuthStore } from '@/store/authStore';
 import * as t from '@/theme';
 
@@ -246,13 +247,7 @@ export default function Welcome() {
                 Google on an iPhone too — which matters because web is the ONLY route iOS users
                 have. See login.tsx for the full note. */}
             {(Platform.OS === 'android' || Platform.OS === 'web') && (
-              <Button
-                title="Sign in with Google"
-                onPress={handleGoogleSignIn}
-                variant="secondary"
-                fullWidth
-                size="lg"
-              />
+              <GoogleSignInButton onPress={handleGoogleSignIn} />
             )}
 
             <Button

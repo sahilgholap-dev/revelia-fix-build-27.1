@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { BackButton } from '@/components/ui/BackButton';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/lib/api';
 import * as t from '@/theme';
@@ -399,14 +400,7 @@ export default function Signup() {
                 Google on an iPhone too — which matters because web is the ONLY route iOS users
                 have. See login.tsx for the full note. */}
             {(Platform.OS === 'android' || Platform.OS === 'web') && (
-              <Button
-                title="Sign in with Google"
-                onPress={handleGoogleSignIn}
-                disabled={isLoading}
-                variant="secondary"
-                fullWidth
-                size="lg"
-              />
+              <GoogleSignInButton onPress={handleGoogleSignIn} disabled={isLoading} />
             )}
           </View>
 
