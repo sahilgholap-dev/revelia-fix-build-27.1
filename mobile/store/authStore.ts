@@ -25,6 +25,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   loginWithApple: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  completeGoogleLogin: (idToken: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateUserName: (newName: string) => Promise<void>;
@@ -238,11 +239,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    // This path is NATIVE's. On web the credential arrives from Google's
+    // rendered button and the component calls completeGoogleLogin directly —
+    // see components/auth/GoogleSignInButton.web.tsx.
     set({ isLoading: true, error: null });
+    let credential: { idToken: string; name: string };
     try {
       configureGoogleSignIn();
-      const { idToken, name } = await signInWithGoogle();
+      credential = await signInWithGoogle();
+    } catch (error: any) {
+      if (error.code === GOOGLE_SIGN_IN_CANCELLED) {
+        set({ isLoading: false });
+        return;
+      }
+      const errorMessage = error.message || 'Google Sign In failed';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
 
+    await get().completeGoogleLogin(credential.idToken, credential.name);
+  },
+
+  // Everything after a Google credential is in hand. Platform-agnostic on
+  // purpose: acquiring the credential differs per platform, turning it into a
+  // session never did.
+  completeGoogleLogin: async (idToken: string, name: string) => {
+    set({ isLoading: true, error: null });
+    try {
       const response = await authAPI.loginWithGoogle(idToken, name);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Google Sign In failed');
@@ -272,10 +295,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // (no profile yet) go to /(capture)/birth-data; returning users go to home.
       router.replace('/' as any);
     } catch (error: any) {
-      if (error.code === GOOGLE_SIGN_IN_CANCELLED) {
-        set({ isLoading: false });
-        return;
-      }
       const errorMessage = error.response?.data?.error || error.message || 'Google Sign In failed';
       set({ error: errorMessage, isLoading: false });
       throw error;
