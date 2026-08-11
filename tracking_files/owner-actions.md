@@ -3135,4 +3135,35 @@ A QA-failed report refunds the month's slot (correct) and leaves **no surviving 
 are unbounded (`C-R9-4`). 🟢 **The user-facing copy is ACCURATE** — verified in code and in production
 data. The question is only whether to cap, and what the user sees at the cap.
 
-> ## 🔴 ▶ **NEXT FREE P-NUMBER: P112.**
+## 🆕 P112 — WEB PWA GOOGLE SIGN-IN (2026-08-11)
+
+### 🔴 `P112` — **THE WEB ORIGIN IS NOT AUTHORISED, SO THE GOOGLE BUTTON CANNOT WORK** · ⬜ open · owner · console change + one env var
+
+`e77c1ed` shipped the code and **needs none more**. Two owner steps remain, and the full runbook —
+with the failure-mode decode table — is **`docs/GOOGLE_SIGNIN_WEB_SETUP.md`**.
+
+**1 · Cloud Console, project `revelia-497203`.** On the EXISTING web client
+(`530984023588-uq36tvq7gbbmrjobh4dc5m995rmpl75o.apps.googleusercontent.com`), add to **Authorized
+JavaScript origins**: `https://app.revelia.me` · `https://revelia-web.pages.dev` ·
+`http://localhost:8081` · `http://localhost:8093`.
+🔴 **Do NOT create a new client.** The server checks `tokenInfo.aud` against
+`GOOGLE_OAUTH_WEB_CLIENT_ID` (`auth.service.ts:431`), so a second client ID authenticates with Google
+and is then rejected by our own backend. One client, two front ends.
+⚠️ No wildcards, so Cloudflare **preview** deploys can never be authorised — test on the custom
+domain or localhost.
+
+**2 · `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the shell that runs `web:deploy`.** The export runs on the
+developer's machine, so **the Cloudflare Pages dashboard is the wrong place** and setting it there
+does nothing. Locally it goes in `mobile/.env`, and the first export after adding it **must be
+`web:export:clear`** — `e77c1ed` recorded the client ID not reaching the bundle until `--clear`.
+
+⚠️ **Also check `GOOGLE_OAUTH_WEB_CLIENT_ID` on the STAGING Railway service** — the web export
+currently bakes the staging API (`app.json:109`). Unset does not fail loudly: the guard is
+`if (expectedAudience && …)`, so **unset skips the audience check entirely.**
+
+🔴 **This does NOT finish web sign-in on its own.** `https://app.revelia.me` is still absent from the
+API's CORS allow-list — measured, `W1-web-pwa.md:41` — so the `POST /api/auth/google` after a
+successful Google prompt is blocked by the browser. That is `W1-web-pwa.md:1036`, still open.
+**Both must land, or the button fails one step later with a different error.**
+
+> ## 🔴 ▶ **NEXT FREE P-NUMBER: P113.**
