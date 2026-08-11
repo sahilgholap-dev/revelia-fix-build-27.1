@@ -14,6 +14,17 @@ export const productionConfig = {
       'https://admin.revelia.me',
       // Add staging if needed
       'https://staging.revelia.me',
+      // The web PWA (W1). Measured 2026-08-11: without these two, a preflight
+      // from either origin returns 204 with NO access-control-allow-origin
+      // header, so Google Sign-In completes and the POST that follows it is
+      // then blocked by the browser — a failure that looks like an auth bug
+      // and is not one.
+      'https://app.revelia.me',
+      // The Cloudflare Pages project alias, used for testing before the custom
+      // domain is live. Its per-deployment hostnames (<hash>.revelia-web.pages.dev)
+      // are random and therefore uncoverable here — test on one of the two
+      // stable origins.
+      'https://revelia-web.pages.dev',
     ],
     credentials: true,
   },

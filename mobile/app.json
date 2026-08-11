@@ -106,7 +106,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://revelia-staging.up.railway.app/api",
+      "apiUrl": "https://revelia-backend-production.up.railway.app/api",
       "eas": {
         "projectId": "6e0a3685-c2a4-4276-94d3-7ad9f46637cf"
       }
