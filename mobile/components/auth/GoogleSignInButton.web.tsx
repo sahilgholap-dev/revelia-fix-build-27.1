@@ -6,14 +6,12 @@ import { showAlert } from '@/lib/alert';
 // project (Metro's platform-fork convention is invisible to tsc — the very
 // thing web-fork-check.js's own header explains), so the bare specifier
 // resolves to the NATIVE lib/googleSignIn.ts, which does not export these
-// three names, and tsc fails. This file only ever ships on the web platform,
+// two names, and tsc fails. This file only ever ships on the web platform,
 // so the explicit path is behaviourally identical under Metro and is the
 // minimal fix that keeps tsc green without touching tsconfig.json.
 import {
-  confirmGoogleAccount,
   mountGoogleButton,
   profileFromIdToken,
-  signOutGoogle,
 } from '@/lib/googleSignIn.web';
 import { useAuthStore } from '@/store/authStore';
 
@@ -55,19 +53,12 @@ export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
 
   const handleCredential = useCallback(
     async (idToken: string) => {
-      // A second credential while the confirm is open would open a second
-      // dialog over the first, closing it without running a handler.
+      // A second credential while the first is still in flight would call
+      // completeGoogleLogin twice for the same token.
       if (inFlight.current) return;
       inFlight.current = true;
       try {
         const profile = profileFromIdToken(idToken);
-        const confirmed = await confirmGoogleAccount(profile);
-        if (!confirmed) {
-          // Clears Google's auto-select so the next press offers the chooser
-          // rather than silently reusing the account just declined.
-          await signOutGoogle();
-          return;
-        }
         await completeGoogleLogin(idToken, profile.name);
       } catch (error) {
         console.error('Google Sign In error:', error);

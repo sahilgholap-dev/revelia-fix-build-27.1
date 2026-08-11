@@ -25,10 +25,8 @@
 // Cloud Console, project revelia-497203. See
 // docs/GOOGLE_SIGNIN_WEB_SETUP.md. Without it GSI rejects the origin.
 //
-// Export list mirrors lib/googleSignIn.ts and adds three web-only helpers;
+// Export list mirrors lib/googleSignIn.ts and adds two web-only helpers;
 // parity is asserted by scripts/web-fork-check.js.
-
-import { showAlert } from './alert';
 
 export const GOOGLE_SIGN_IN_CANCELLED = 'GOOGLE_SIGN_IN_CANCELLED';
 
@@ -122,9 +120,14 @@ export async function mountGoogleButton(
 /**
  * Best-effort display fields out of the ID token payload.
  *
- * NEVER trusted for auth — the server re-verifies the token itself. These two
- * values exist only so the confirm dialog can name the account the user is
- * about to sign in as.
+ * Display/label data only — never trusted for auth. Identity (email, Google
+ * subject ID) comes from the server's OWN re-verification of the ID token
+ * against Google's tokeninfo endpoint (auth.service.ts's verifyGoogleToken),
+ * not from anything decoded here. `name` DOES travel on to the server — it is
+ * passed to completeGoogleLogin, which sends it on POST /api/auth/google —
+ * where it fills a new account's display name on first sign-in. That is a
+ * profile-content choice, not an identity decision: a forged `name` could
+ * only mislabel a display field, never authenticate as someone else.
  */
 export function profileFromIdToken(idToken: string): { name: string; email: string } {
   try {
@@ -133,7 +136,7 @@ export function profileFromIdToken(idToken: string): { name: string; email: stri
     // atob() alone returns a Latin-1 byte string: a non-ASCII name ("अनिल",
     // "José", "李") comes out as mojibake, silently — JSON.parse still
     // succeeds on the mangled bytes. Re-decoding those bytes as UTF-8 is what
-    // makes the confirm dialog actually name the account it is naming.
+    // keeps that name intact on the way to completeGoogleLogin.
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const json = new TextDecoder().decode(Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)));
     const parsed = JSON.parse(json);
@@ -141,52 +144,6 @@ export function profileFromIdToken(idToken: string): { name: string; email: stri
   } catch {
     return { name: '', email: '' };
   }
-}
-
-/**
- * Asks the user to confirm the account Google returned, BEFORE anything is sent
- * to our server.
- *
- * 🔴 WHY THIS EXISTS: the server does User.create on a first Google sign-in, so
- *    a mis-tapped account does not merely sign you in wrong — it creates a whole
- *    stray Revelia account. This dialog is the only thing between the chooser
- *    and that write.
- *
- * The second button carries the cancel style, which is what makes Escape and a
- * backdrop tap resolve false as well (see cancelButtonOf in alert.web.ts). Every
- * accidental exit therefore lands on "do not sign in".
- *
- * Always settles — including across flows, not only within this one. A LATER
- * showAlert (an unrelated error on the same screen, say) STOMPS this dialog;
- * that stomp now runs the outgoing dialog's own `cancel`-styled button rather
- * than closing silently (see openDialog in alert.web.ts), so a stomp resolves
- * this promise to `false` exactly as if the user had declined.
- */
-export function confirmGoogleAccount(profile: {
-  name: string;
-  email: string;
-}): Promise<boolean> {
-  if (typeof document === 'undefined') return Promise.resolve(false);
-
-  return new Promise<boolean>((resolve) => {
-    let settled = false;
-    const done = (value: boolean) => {
-      if (settled) return;
-      settled = true;
-      resolve(value);
-    };
-
-    // Both fields can be empty (a malformed or undecodable token) — naming no
-    // account is worse than naming it generically.
-    const title = profile.name || profile.email
-      ? `Continue as ${profile.name || profile.email}`
-      : 'Continue with this Google account';
-
-    showAlert(title, profile.email, [
-      { text: 'Continue', onPress: () => done(true) },
-      { text: 'Use a different account', style: 'cancel', onPress: () => done(false) },
-    ]);
-  });
 }
 
 /**
