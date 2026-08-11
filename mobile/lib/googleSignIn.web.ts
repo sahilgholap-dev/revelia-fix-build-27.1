@@ -6,18 +6,38 @@
 // the token against GOOGLE_OAUTH_WEB_CLIENT_ID, and that is the very client ID
 // used here. One client ID, two front ends.
 //
-// OWNER ACTION REQUIRED before this works in a browser: the deployed origin
-// (and http://localhost:8081 for dev) must be listed under "Authorized
-// JavaScript origins" on that OAuth client in Google Cloud Console, project
-// revelia-497203. Without it GSI fails with origin_mismatch.
+// 🔴 WHY THE RENDERED BUTTON AND NOT ONE TAP. This fork used to call
+//    google.accounts.id.prompt(). Dismissing that prompt puts the origin into a
+//    COOLDOWN — the browser suppresses third-party sign-in for a growing window
+//    — and the two status callbacks written to detect it, isNotDisplayed and
+//    isSkippedMoment, DO NOT FIRE UNDER FedCM. Measured, and Google's own
+//    console warning says those methods are being retired. The result was a
+//    button that opened the chooser once and then produced a two-minute spinner
+//    on every later press.
 //
-// Export list mirrors lib/googleSignIn.ts exactly; parity is asserted by
-// scripts/web-fork-check.js.
+//    The rendered button is BUTTON MODE: user-gesture initiated, always shows
+//    the chooser, exempt from that cooldown. It is also why the old 120-second
+//    backstop is gone rather than shortened — nothing is awaited across
+//    Google's UI anymore, so there is no promise left to strand.
+//
+// OWNER ACTION REQUIRED before this works in a browser: the origin must be
+// listed under "Authorized JavaScript origins" on that OAuth client in Google
+// Cloud Console, project revelia-497203. See
+// docs/GOOGLE_SIGNIN_WEB_SETUP.md. Without it GSI rejects the origin.
+//
+// Export list mirrors lib/googleSignIn.ts and adds three web-only helpers;
+// parity is asserted by scripts/web-fork-check.js.
+
+import { showAlert } from './alert';
 
 export const GOOGLE_SIGN_IN_CANCELLED = 'GOOGLE_SIGN_IN_CANCELLED';
 
 const CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const GSI_SRC = 'https://accounts.google.com/gsi/client';
+
+// Google's rendered button takes a pixel width and caps at 400.
+const MAX_BUTTON_WIDTH = 400;
+const FALLBACK_BUTTON_WIDTH = 320;
 
 let gsiLoader: Promise<void> | null = null;
 
@@ -44,20 +64,22 @@ function loadGsi(): Promise<void> {
 }
 
 /**
- * No-op on web: GSI is configured per call in signInWithGoogle, because
- * initialize() takes the callback that receives the credential.
+ * No-op on web: initialization happens in mountGoogleButton, which is the only
+ * place that has the credential callback to hand it.
  */
 export function configureGoogleSignIn(): void {}
 
 /**
- * Prompts for a Google credential and returns the ID token.
+ * Renders Google's own button into `host` and reports each credential.
  *
- * Returns the same shape as the native fork, `{ idToken, name }`, so
- * authStore.loginWithGoogle is unchanged. GSI's credential is a JWT whose
- * payload carries the display name; the server re-verifies the token itself,
- * so decoding here is only for the greeting and is never trusted.
+ * Rejects if the script cannot load or no client ID is configured; the caller
+ * is expected to fall back to a control that explains itself rather than a
+ * button that does nothing.
  */
-export async function signInWithGoogle(): Promise<{ idToken: string; name: string }> {
+export async function mountGoogleButton(
+  host: HTMLElement,
+  onCredential: (idToken: string) => void
+): Promise<void> {
   if (!CLIENT_ID) {
     throw new Error('No Google client ID — EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID not set');
   }
@@ -68,90 +90,92 @@ export async function signInWithGoogle(): Promise<{ idToken: string; name: strin
     throw new Error('Google Sign-In unavailable');
   }
 
-  return new Promise<{ idToken: string; name: string }>((resolve, reject) => {
-    let settled = false;
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: (response: { credential?: string }) => {
+      if (response?.credential) onCredential(response.credential);
+    },
+  });
 
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(backstop);
-      fn();
-    };
-
-    const cancel = () =>
-      finish(() => {
-        const err: any = new Error('Sign-In cancelled');
-        err.code = GOOGLE_SIGN_IN_CANCELLED;
-        reject(err);
-      });
-
-    // 🔴 A BACKSTOP, BECAUSE GOOGLE CAN FAIL WITHOUT TELLING US. When the
-    //    origin is not on the OAuth client's authorised list, GSI rejects
-    //    INTERNALLY — observed as "[GSI_LOGGER]: FedCM get() rejects with
-    //    NetworkError" in the console — and neither the credential callback nor
-    //    the notification callback fires. Without this, the promise would never
-    //    settle: the caller's catch never runs, no dialog appears, and the
-    //    button is dead in exactly the way this whole class of bug keeps
-    //    presenting. A settled promise is the difference between a wrong answer
-    //    and no answer.
-    //
-    //    Generous on purpose — the account chooser is a human interaction and
-    //    must not be cut off mid-decision. This exists to guarantee an ending,
-    //    not to impose a deadline.
-    const backstop = setTimeout(() => {
-      finish(() => {
-        reject(
-          new Error(
-            'Google Sign-In did not respond. This usually means this site is not ' +
-              'authorised for Google Sign-In yet. Please use email sign-in.'
-          )
-        );
-      });
-    }, 120_000);
-
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      // Opt in to FedCM, the path Google is making mandatory. The prompt-status
-      // methods used below are deprecated under it and warn in the console;
-      // they are kept as a FAST PATH for the cases they still report, with the
-      // backstop above as the guarantee.
-      use_fedcm_for_prompt: true,
-      callback: (response: { credential?: string }) => {
-        const idToken = response?.credential;
-        if (!idToken) {
-          cancel();
-          return;
-        }
-        finish(() => resolve({ idToken, name: nameFromIdToken(idToken) }));
-      },
-    });
-
-    // One Tap is suppressed by the browser after a dismissal (cool-down), and
-    // is unavailable in some embedded webviews. Both are user-visible as
-    // "nothing happened", so they are reported as a cancel and the email/OTP
-    // path on the same screen remains the reliable route.
-    try {
-      google.accounts.id.prompt((notification: any) => {
-        if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
-          cancel();
-        }
-      });
-    } catch (error) {
-      finish(() => reject(error));
-    }
+  const measured = Math.round(host.getBoundingClientRect().width) || FALLBACK_BUTTON_WIDTH;
+  google.accounts.id.renderButton(host, {
+    type: 'standard',
+    theme: 'filled_black',
+    size: 'large',
+    shape: 'pill',
+    text: 'signin_with',
+    logo_alignment: 'center',
+    width: Math.min(measured, MAX_BUTTON_WIDTH),
   });
 }
 
-/** Best-effort display name out of the ID token payload. Never trusted for auth. */
-function nameFromIdToken(idToken: string): string {
+/**
+ * Best-effort display fields out of the ID token payload.
+ *
+ * NEVER trusted for auth — the server re-verifies the token itself. These two
+ * values exist only so the confirm dialog can name the account the user is
+ * about to sign in as.
+ */
+export function profileFromIdToken(idToken: string): { name: string; email: string } {
   try {
     const payload = idToken.split('.')[1];
-    if (!payload) return '';
+    if (!payload) return { name: '', email: '' };
     const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(json)?.name ?? '';
+    const parsed = JSON.parse(json);
+    return { name: parsed?.name ?? '', email: parsed?.email ?? '' };
   } catch {
-    return '';
+    return { name: '', email: '' };
   }
+}
+
+/**
+ * Asks the user to confirm the account Google returned, BEFORE anything is sent
+ * to our server.
+ *
+ * 🔴 WHY THIS EXISTS: the server does User.create on a first Google sign-in, so
+ *    a mis-tapped account does not merely sign you in wrong — it creates a whole
+ *    stray Revelia account. This dialog is the only thing between the chooser
+ *    and that write.
+ *
+ * The second button carries the cancel style, which is what makes Escape and a
+ * backdrop tap resolve false as well (see cancelButtonOf in alert.web.ts). Every
+ * accidental exit therefore lands on "do not sign in".
+ *
+ * Always settles. The one gap: another showAlert opening over this one closes it
+ * without running any handler, which would strand the promise. The caller's
+ * in-flight guard makes that unreachable from this flow.
+ */
+export function confirmGoogleAccount(profile: {
+  name: string;
+  email: string;
+}): Promise<boolean> {
+  if (typeof document === 'undefined') return Promise.resolve(false);
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const done = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    showAlert(`Continue as ${profile.name || profile.email}`, profile.email, [
+      { text: 'Continue', onPress: () => done(true) },
+      { text: 'Use a different account', style: 'cancel', onPress: () => done(false) },
+    ]);
+  });
+}
+
+/**
+ * Native-only. Kept exported so web-fork-check's parity assertion holds, and
+ * throwing rather than returning so a future web call site fails loudly instead
+ * of hanging — which is the failure mode this whole rewrite removed.
+ */
+export async function signInWithGoogle(): Promise<{ idToken: string; name: string }> {
+  throw new Error(
+    'signInWithGoogle is native-only. On web the credential arrives from the rendered ' +
+      'button — use mountGoogleButton, see components/auth/GoogleSignInButton.web.tsx.'
+  );
 }
 
 export async function signOutGoogle(): Promise<void> {

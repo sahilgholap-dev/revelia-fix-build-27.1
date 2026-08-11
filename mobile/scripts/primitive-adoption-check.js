@@ -318,6 +318,12 @@ const CONTRACTS = [
       //    replaces a hand-rolled touchable that login.tsx carried, which had dropped the fixed
       //    height and the a11y contract this module exists to pin.
       'components/auth/GoogleSignInButton.tsx',
+      // 🆕 DECLARED — the web fork of the entry above (2026-08-11). Metro swaps the whole
+      //    module on web, so this is a SEPARATE file with its own adoption: the fallback
+      //    branch, reached only when Google's own rendered button fails to mount, renders this
+      //    primitive rather than leaving a dead control. Same contract, same reason, one
+      //    platform over.
+      'components/auth/GoogleSignInButton.web.tsx',
     ],
     // 🔴 THE TWO CAMERA SCREENS ARE THE ONLY REAL "MUST NOT", and the reason is not style.
     //    Their controls are a shutter and a gallery affordance: circular, icon-only, sized to the
