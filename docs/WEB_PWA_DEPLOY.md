@@ -31,24 +31,26 @@ Each deploy also prints a one-off `https://<hash>.revelia-web.pages.dev` for tha
 
 ## 3. Add the subdomain
 
-Cloudflare dashboard → **Workers & Pages** → **revelia-web** → **Custom domains** → **Set up a domain** → enter `app.revelia.me` → **Continue**.
+**`revelia.me`'s DNS is hosted by Cloudflare** — verified 2026-08-11, the nameservers are `mckinley.ns.cloudflare.com` / `roman.ns.cloudflare.com`. The domain was *registered* at Namecheap, but its nameservers were moved, so Namecheap has no DNS records to edit. Everything happens in Cloudflare.
 
-🔴 **The DNS record is NOT created for you.** `revelia.me` is registered at **Namecheap**, and its nameservers do not point at Cloudflare — so Cloudflare shows a CNAME target and waits for you to create it there.
+Cloudflare dashboard → **Workers & Pages** → **revelia-web** → **Custom domains** tab → **Set up a domain** → enter `app.revelia.me` → **Continue**.
 
-Namecheap → **Domain List** → `revelia.me` → **Manage** → **Advanced DNS** → **Add New Record**:
+Because the zone is on the same account, Cloudflare creates or detects the DNS record itself. The record is:
 
 | field | value |
 |---|---|
-| Type | `CNAME Record` |
-| Host | `app` |
-| Value | `revelia-web.pages.dev` |
-| TTL | Automatic |
+| Type | `CNAME` |
+| Name | `app` |
+| Target | `revelia-web.pages.dev` |
+| TTL | Auto |
 
-⚠️ A **CNAME Record**, not a "URL Redirect Record" — a redirect breaks HTTPS and PWA install.
+⚠️ Target the project alias `revelia-web.pages.dev` — **never** a per-deployment URL like `21bb59e0.revelia-web.pages.dev`. Every deploy mints a new hash, so such a record goes stale immediately.
 
-⚠️ Point it at `revelia-web.pages.dev`, the project alias — **never** at a deployment URL like `21bb59e0.revelia-web.pages.dev`. Every deploy mints a new hash, so that record would go stale immediately.
+### 🔴 A DNS record alone is not enough — this is what a 522 means
 
-> Moving the whole zone to Cloudflare would make this automatic, but it migrates all of `revelia.me`'s DNS at once — including `api.revelia.me` and the SendGrid MX/SPF/DKIM records. A missed MX record stops OTP codes and report emails silently. That deserves its own window, not a test deploy.
+Both halves are required: the **DNS record**, and the hostname **registered on the Pages project**. With the record in place but the custom domain not added to the project, `https://app.revelia.me` returns **522**. Cloudflare proxies the request, Pages does not recognise the `Host` header, and there is no origin to answer it.
+
+522 here does **not** mean the DNS is wrong. Measured on this exact setup: the record resolved to Cloudflare IPs correctly while the site returned 522, and adding the custom domain on the project was the whole fix.
 
 ## 4. Authorize the origin for Google Sign-In
 
