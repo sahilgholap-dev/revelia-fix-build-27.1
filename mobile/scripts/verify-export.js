@@ -76,18 +76,42 @@ if (bundle) {
   }
 
   if (resolved) {
-    // The bundle embeds the public config verbatim, so the value should appear
-    // as a literal. Escape it for the regex, not for JSON — Metro does not
-    // re-encode a plain URL.
-    if (bundle.includes(resolved)) {
-      ok(`API URL baked in matches app config (${resolved})`);
-    } else {
-      const found = [...new Set(bundle.match(/https:\/\/[a-z0-9.-]*railway\.app\/api/g) || [])];
+    // 🔴 THIS USED TO BE `bundle.includes(resolved)` AND IT COULD NOT FAIL FOR
+    //    THE CASE THAT MATTERS. api.ts ends its resolution chain with a
+    //    HARDCODED production URL, so that string is in EVERY bundle whatever
+    //    the config says. A presence test is therefore satisfied by the
+    //    fallback, and whenever the intended target is production the assertion
+    //    is structurally incapable of failing.
+    //
+    //    Measured 2026-08-11: app.json said production, the shipped bundle's
+    //    embedded config said staging, and this assertion printed
+    //    "API URL baked in matches app config (…production…)" and passed. The
+    //    app talked to the wrong database for a full deploy cycle.
+    //
+    //    A present literal is not the live literal (`O-67`). What decides
+    //    behaviour is the value inside the EMBEDDED CONFIG OBJECT, because
+    //    api.ts reads `extra.apiUrl` before anything else — so that is what is
+    //    compared now, not whether the string appears somewhere.
+    // Expo inlines the public config as a JSON STRING, so the quotes arrive
+    // backslash-escaped (\"extra\":{\"apiUrl\":\"…\"). Accept both forms rather
+    // than depending on which one a given Expo version emits.
+    const embedded = bundle.match(/\\?"extra\\?":\s*\{\s*\\?"apiUrl\\?":\s*\\?"([^"\\]+)/);
+
+    if (!embedded) {
       bad(
         'API URL baked in matches app config',
-        `app config says ${resolved}\n        ` +
-          `bundle contains ${found.length ? found.join(', ') : '(no railway URL at all)'}\n        ` +
-          `This is a STALE METRO CACHE — re-run with: npx expo export --platform web --clear`,
+        'could not find the embedded "extra":{"apiUrl":…} in the bundle.\n        ' +
+          'Expo changed how the public config is inlined — this assertion needs updating, ' +
+          'and until it is, a stale API URL can ship unnoticed.',
+      );
+    } else if (embedded[1] === resolved) {
+      ok(`API URL baked in matches app config (${resolved})`);
+    } else {
+      bad(
+        'API URL baked in matches app config',
+        `app config says   ${resolved}\n        ` +
+          `bundle embeds     ${embedded[1]}\n        ` +
+          `This is a STALE METRO CACHE — re-run with: npm run web:export:clear`,
       );
     }
   }
