@@ -15,11 +15,17 @@ import { BirthDataInput } from '@shared/types';
 import * as Haptics from 'expo-haptics';
 import * as t from '@/theme';
 import { Ionicons } from '@expo/vector-icons';
+// Bare specifier, not '@/lib/googleSignIn.web' — this screen ships on every
+// platform (unlike GoogleSignInButton.web.tsx, which is web-only by filename),
+// so Metro must pick the platform fork itself at bundle time. tsc resolves the
+// bare specifier to the native file, which is fine: both forks export
+// signOutGoogle with the same signature.
+import { signOutGoogle } from '@/lib/googleSignIn';
 
 export default function BirthDataScreen() {
   const router = useRouter();
   const { setBirthData, isLoading, error, clearError } = useProfileStore();
-  const { user, updateUserName } = useAuthStore();
+  const { user, updateUserName, logout } = useAuthStore();
 
   // Pre-fill name from auth state, but skip the legacy "User" default and
   // the new "Guest" backend fallback — those aren't the user's real name.
@@ -178,6 +184,28 @@ export default function BirthDataScreen() {
     router.replace('/(capture)/face-capture');
   };
 
+  // BackButton's onPress (see components/ui/BackButton.tsx): this screen is
+  // reached via two replaces in a row, so there is nothing to pop — the
+  // destination has to be explicit instead. This is not undo; it ends the
+  // session that got the user here, so a mis-tapped Google account is
+  // recoverable by signing in again rather than gated up front.
+  const handleBack = async () => {
+    // Order matters: clear the session and Google's auto-select BEFORE
+    // navigating, so landing back on welcome does not silently resume the
+    // account just left.
+    await logout();
+    try {
+      // logout() only signs out of Google on Android; this screen is also
+      // reached by email and Apple sign-ups who never touched Google at all,
+      // and the native fork's signOutGoogle() is not defensive on its own —
+      // wrapped here rather than in lib/googleSignIn.ts.
+      await signOutGoogle();
+    } catch (err) {
+      console.error('Google sign-out error:', err);
+    }
+    router.replace('/(auth)/welcome');
+  };
+
   const isFormValid = nameValid && birthDate !== null && handedness !== null;
 
   return (
@@ -201,11 +229,12 @@ export default function BirthDataScreen() {
       >
           {/* Header */}
           <View className="pt-6 pb-8">
-            {/* The other screen the review named — and the ONE that proves the guard is required
-                rather than tidy. It is pushed from the astrology hub and the profile, and it is
-                REPLACED into by the root layout on first run, when there is nothing beneath it.
-                A hard-coded arrow would be a dead control on the first screen a new install sees. */}
-            <BackButton className="mb-4" />
+            {/* This screen is pushed from the astrology hub and the profile, and it is REPLACED
+                into by the root layout on first run — on that path there is nothing beneath it, so
+                BackButton's own canGoBack() guard would render nothing here. `onPress` gives it an
+                explicit destination instead (handleBack, above): a mis-tapped sign-in is recovered
+                by signing out and returning to welcome, rather than gated before it can happen. */}
+            <BackButton className="mb-4" onPress={handleBack} />
             {/* 🔴 §17 — this screen's one hero, and the third off-ramp className size the funnel
                 phase retires. §17.3 gives a screen title the display hero where no data hero
                 exists. The size utility carried no family and no tracking; the step's serif

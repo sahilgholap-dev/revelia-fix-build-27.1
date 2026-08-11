@@ -53,13 +53,31 @@ import * as t from '@/theme';
  *
  * ⚠️ An icon has no accessible name, so it carries one. It is not the visible text, because there
  *    is none.
+ *
+ * ── optional `onPress` (added 2026-08-11) ─────────────────────────────────────────────────────
+ *
+ * `birth-data`'s own entry is reached via two `replace`s in a row (post-auth routing, then this
+ * screen), so it never has anything to pop — the guard above correctly renders nothing there,
+ * which is invisible rather than merely unhelpful. `onPress` lets a caller name an EXPLICIT
+ * destination for exactly that case: when it is supplied, history is irrelevant by construction,
+ * so the guard is skipped entirely rather than asked a question whose answer no longer matters.
+ * Every caller that omits it keeps today's guarded behaviour unchanged — the five existing
+ * adopters do not pass it.
  */
-export function BackButton({ className }: { className?: string }) {
+export function BackButton({
+  className,
+  onPress,
+}: {
+  className?: string;
+  onPress?: () => void;
+}) {
   const router = useRouter();
-  if (!router.canGoBack()) return null;
+  if (!onPress) {
+    if (!router.canGoBack()) return null;
+  }
   return (
     <TouchableOpacity
-      onPress={() => router.back()}
+      onPress={onPress ?? (() => router.back())}
       accessibilityRole="button"
       accessibilityLabel="Go back"
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
