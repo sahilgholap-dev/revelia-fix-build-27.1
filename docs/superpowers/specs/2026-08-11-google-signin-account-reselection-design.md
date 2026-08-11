@@ -51,6 +51,24 @@ handoff.
 | D3 | **Web only.** Android keeps its current flow untouched | Put the confirm in the shared store so both platforms inherit it. Correct eventually, but it changes a live Play Store flow in a 2.0.x point release |
 | D4 | **Fallback-only re-selection.** "Use a different account" dismisses and leaves the user on the auth screen with Google's button in front of them | Programmatically re-trigger the chooser from our modal's click handler — unverified API behaviour, and the fallback costs one tap |
 | D5 | **The confirm reuses `showAlert`**, not a new component | A bespoke modal. `lib/alert.web.ts` already solves this exact problem, and its header documents why imperative DOM beats a React host for non-render-tree callers |
+| D6 | **The shared component wraps the `Button` primitive** (`variant="secondary" fullWidth size="lg"`) | Reproducing `login.tsx`'s hand-rolled `TouchableOpacity`. See the correction below |
+
+### D6 — a correction found while planning
+
+An earlier draft of this spec said the pill would be "extracted verbatim from `login.tsx:223`."
+**That was wrong about two of the three screens.** `welcome.tsx:249` and `signup.tsx:402` already
+render the `Button` primitive; only `login.tsx` hand-rolls a `TouchableOpacity`.
+
+That hand-rolled copy is precisely the regression `primitive-adoption-check.js`'s `Button` contract
+exists to prevent — its comment names the losses as "X3's fixed height, the pill, the on-accent
+pairing and the a11y contract IN ONE EDIT, and every one of those losses is undetectable on Android."
+The gate misses this instance because `login.tsx` renders `Button` elsewhere, so the file-level
+`expected` list is already satisfied.
+
+**Consequence for D3, stated plainly:** "Android untouched" becomes **"Android untouched except
+`login.tsx`'s Google button, which gains X3's fixed `lg` height."** `welcome.tsx` and `signup.tsx`
+are unaffected — they are already on that height. This converges three screens that shipped at two
+different heights, and it is the reason the Android smoke in §7 is required rather than advisory.
 
 **Accepted compromise:** `showAlert` has no image slot, so the confirm shows **name and email, no
 avatar**. Adding an image slot to the shared dialog is a larger change than this feature justifies.
@@ -65,7 +83,7 @@ gap on web as a side effect. Android remains non-compliant and is out of scope h
 
 | file | change |
 |---|---|
-| `mobile/components/auth/GoogleSignInButton.tsx` | **new** — the pill markup extracted **verbatim** from `login.tsx:223`, props `{ onPress }`. No restyling |
+| `mobile/components/auth/GoogleSignInButton.tsx` | **new** — wraps the `Button` primitive as `variant="secondary" fullWidth size="lg"`, props `{ onPress, disabled? }`. Per D6 |
 | `mobile/components/auth/GoogleSignInButton.web.tsx` | **new** — owns the host `<div>` ref and the React lifecycle; calls `mountGoogleButton` on mount and orchestrates decode → confirm → `completeGoogleLogin` |
 | `mobile/lib/googleSignIn.web.ts` | rewritten. `prompt()` and the 120s backstop **deleted**. Retains `loadGsi()`. Gains two exports: `mountGoogleButton` and `confirmGoogleAccount` |
 | `mobile/lib/googleSignIn.ts` | **untouched** |
@@ -208,6 +226,6 @@ required before release and joins the device checklist already outstanding in `s
 | risk | mitigation |
 |---|---|
 | Google's button visual diverges from the app's design system on web | Accepted under D2. Confined to web; Android is unchanged |
-| The verbatim pill extraction silently drifts during the move | Extract without restyling; diff the three call sites against the original markup |
+| `login.tsx`'s Google button changes height on Android (D6) | Intended and owner-approved. It is the one visible Android change in this work, and the reason the Android smoke is required |
 | `renderButton` sizing against a full-width pill container | `renderButton` accepts a pixel width capped at 400; render at container width, clamped |
 | Cooldown assumption is wrong and button mode is also suppressed | Verified first during implementation: dismiss the chooser, tap the rendered button, confirm it reopens. If it does not, the design's premise fails and D2 must be revisited before anything else is built |
