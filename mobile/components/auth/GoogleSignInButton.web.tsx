@@ -24,9 +24,16 @@ interface GoogleSignInButtonProps {
   disabled?: boolean;
 }
 
-const UNAVAILABLE_TITLE = 'Sign In Failed';
-const UNAVAILABLE_BODY =
-  'Google Sign In is unavailable. Please try again or use another sign-in method.';
+// Two distinct failure classes get two distinct messages: "try again" is
+// false for a mount failure (a missing client ID is permanent, not transient)
+// and misleading for a server-side rejection ("Google" was never the problem).
+const MOUNT_FAILURE_TITLE = 'Sign In Unavailable';
+const MOUNT_FAILURE_BODY =
+  'Google Sign In is not available in this browser. Please use another sign-in method.';
+
+const CREDENTIAL_FAILURE_TITLE = 'Sign In Failed';
+const CREDENTIAL_FAILURE_BODY =
+  'Something went wrong finishing your Google sign-in. Please try again or use another sign-in method.';
 
 /**
  * Web fork: hosts Google's own rendered button.
@@ -64,7 +71,7 @@ export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
         await completeGoogleLogin(idToken, profile.name);
       } catch (error) {
         console.error('Google Sign In error:', error);
-        showAlert(UNAVAILABLE_TITLE, UNAVAILABLE_BODY);
+        showAlert(CREDENTIAL_FAILURE_TITLE, CREDENTIAL_FAILURE_BODY);
       } finally {
         inFlight.current = false;
       }
@@ -84,6 +91,10 @@ export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
 
     return () => {
       disposed = true;
+      // renderButton APPENDS rather than replaces, so a re-run of this effect
+      // (a new handleCredential identity, a remount) would otherwise stack a
+      // second Google button in the same host.
+      host.replaceChildren();
     };
   }, [handleCredential]);
 
@@ -91,7 +102,7 @@ export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
     return (
       <Button
         title="Sign in with Google"
-        onPress={() => showAlert(UNAVAILABLE_TITLE, UNAVAILABLE_BODY)}
+        onPress={() => showAlert(MOUNT_FAILURE_TITLE, MOUNT_FAILURE_BODY)}
         disabled={disabled}
         variant="secondary"
         fullWidth
@@ -100,5 +111,19 @@ export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
     );
   }
 
-  return <div ref={hostRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />;
+  return (
+    <div
+      ref={hostRef}
+      style={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        // Google's own button has no disabled prop — this is the only way to
+        // make the host mean the same thing signup.tsx's disabled={isLoading}
+        // already means for the Button primitive's fallback branch above.
+        pointerEvents: disabled ? 'none' : 'auto',
+        opacity: disabled ? 0.5 : 1,
+      }}
+    />
+  );
 }

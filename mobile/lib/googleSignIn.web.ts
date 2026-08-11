@@ -74,7 +74,9 @@ export function configureGoogleSignIn(): void {}
  *
  * Rejects if the script cannot load or no client ID is configured; the caller
  * is expected to fall back to a control that explains itself rather than a
- * button that does nothing.
+ * button that does nothing. Resolves WITHOUT rendering if `host` is no longer
+ * attached to the document by the time the script has loaded — the component
+ * unmounted mid-flight, and there is nothing left to draw a button into.
  */
 export async function mountGoogleButton(
   host: HTMLElement,
@@ -96,6 +98,14 @@ export async function mountGoogleButton(
       if (response?.credential) onCredential(response.credential);
     },
   });
+
+  // The component may have unmounted while the script above was loading —
+  // React does not (and cannot) cancel this async function mid-flight. A
+  // detached host still has a getBoundingClientRect() (it returns all zeros),
+  // so rendering into it would silently take FALLBACK_BUTTON_WIDTH and paint a
+  // button nobody will ever see. Checking here, rather than in the component,
+  // keeps this DOM-lifecycle knowledge where the DOM node is read.
+  if (!host.isConnected) return;
 
   const measured = Math.round(host.getBoundingClientRect().width) || FALLBACK_BUTTON_WIDTH;
   google.accounts.id.renderButton(host, {
@@ -120,7 +130,12 @@ export function profileFromIdToken(idToken: string): { name: string; email: stri
   try {
     const payload = idToken.split('.')[1];
     if (!payload) return { name: '', email: '' };
-    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    // atob() alone returns a Latin-1 byte string: a non-ASCII name ("अनिल",
+    // "José", "李") comes out as mojibake, silently — JSON.parse still
+    // succeeds on the mangled bytes. Re-decoding those bytes as UTF-8 is what
+    // makes the confirm dialog actually name the account it is naming.
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = new TextDecoder().decode(Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)));
     const parsed = JSON.parse(json);
     return { name: parsed?.name ?? '', email: parsed?.email ?? '' };
   } catch {
@@ -141,9 +156,11 @@ export function profileFromIdToken(idToken: string): { name: string; email: stri
  * backdrop tap resolve false as well (see cancelButtonOf in alert.web.ts). Every
  * accidental exit therefore lands on "do not sign in".
  *
- * Always settles. The one gap: another showAlert opening over this one closes it
- * without running any handler, which would strand the promise. The caller's
- * in-flight guard makes that unreachable from this flow.
+ * Always settles — including across flows, not only within this one. A LATER
+ * showAlert (an unrelated error on the same screen, say) STOMPS this dialog;
+ * that stomp now runs the outgoing dialog's own `cancel`-styled button rather
+ * than closing silently (see openDialog in alert.web.ts), so a stomp resolves
+ * this promise to `false` exactly as if the user had declined.
  */
 export function confirmGoogleAccount(profile: {
   name: string;
@@ -159,7 +176,13 @@ export function confirmGoogleAccount(profile: {
       resolve(value);
     };
 
-    showAlert(`Continue as ${profile.name || profile.email}`, profile.email, [
+    // Both fields can be empty (a malformed or undecodable token) — naming no
+    // account is worse than naming it generically.
+    const title = profile.name || profile.email
+      ? `Continue as ${profile.name || profile.email}`
+      : 'Continue with this Google account';
+
+    showAlert(title, profile.email, [
       { text: 'Continue', onPress: () => done(true) },
       { text: 'Use a different account', style: 'cancel', onPress: () => done(false) },
     ]);

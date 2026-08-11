@@ -165,7 +165,12 @@ export function showAlert(
 
   document.addEventListener('keydown', onKey, true);
   document.body.appendChild(backdrop);
-  openDialog = () => close();
+  // A later showAlert STOMPS this dialog (see the call above): closing with no
+  // handler would strand any promise a caller built around this dialog's
+  // buttons settling. Only an EXPLICIT `cancel` style runs here — never the
+  // Escape/backdrop fallback to the last button — because a stomp is not a
+  // user decision and must not fire a destructive action nobody chose.
+  openDialog = () => close(() => list.find((b) => b.style === 'cancel')?.onPress?.());
 
   // Focus the primary action so the dialog is reachable by keyboard.
   (row.firstElementChild as HTMLButtonElement | null)?.focus();
