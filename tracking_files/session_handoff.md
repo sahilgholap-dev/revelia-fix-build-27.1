@@ -6,119 +6,96 @@
 
 ## CURRENT HANDOFF
 
-**Written by**: `build27.1-r9-qa-incident` | 2026-08-06
-**Branch**: `fix/build-27.1` — 🟢 **49 COMMITS. ⚠️ COMMITTED, NOT PUSHED.** Tree clean.
-**`npx tsc --noEmit`**: 🟢 **mobile 0 / server 0.** · **`npm run gate`**: 🟢 **exit 0.**
-**server**: `check:prose` 0 · `check:tier` 0 · `check:ailog` 0 · timing 8/8 · qa-prompt · qa-router ·
-qa-device-gate all green
-**`--diff`** not re-run and **it does not need to be** — this session touched **no file under a
-Tailwind content glob** (`mobile/app/**`, `mobile/components/**`). Proven by `git diff --name-only`.
+**Written by**: `google-signin-web-task5` | 2026-08-11
+**Branch**: `fix/google-signin-web` (cut from `master` at `50e174a`, NOT `fix/build-27.1`) — 🟢 **5
+commits, tree otherwise clean** (one unrelated, unstaged `mobile/public/sw.js` timestamp bump from
+running `web:export` during verification — not committed). **NOT YET MERGED.**
+**`npx tsc --noEmit`**: 🟢 **mobile 0 / server 0** (both re-run this session, zero output either way).
+**`npm run gate`**: 🟢 **exit 0** (Button contract 29 expected / 29 actual / 0 residue; the
+report-only `no-white-on-accent` hits are all pre-existing — none in `login.tsx`, `signup.tsx`,
+`welcome.tsx`, or `GoogleSignInButton*`). **`web:export` / `verify-export`**: 🟢 PASS, re-run this
+session. **`--diff`** not re-run this session and did not need to be — no file under a Tailwind
+content glob changed since Task 4 last checked it at 0 rules moved.
 
-# 🔴 PUSH `70594da` NOW. A PAID DELIVERABLE IS BROKEN IN PRODUCTION.
+# 🔴 THE PLAN'S PREMISE IS UNVERIFIED. DO NOT TRUST THE FIX UNTIL IT IS.
 
-**This was an incident session, not the build round.** Two commits, server-side + docs.
-⚠️ **Everything the previous handoff said about the pending BUILD is unchanged and still true** —
-the mobile work is untouched, the device checklist is unrun, and the next action after the push is
-still `owner-actions.md` walk → EAS → Internal Testing.
+The whole design rests on one claim: **Google's rendered button is exempt from the One Tap dismissal
+cooldown.** A probe (`gsi-probe.html`) was written specifically to test this and this ledger recorded
+it as **PASS**. 🔴 **That record was wrong.** It was taken from the owner's one-word reply
+("working"), not an observation, and re-measured independently later: the origin the probe ran
+against (`http://localhost:8093`) returns `HTTP 403` and
+`[GSI_LOGGER]: The given origin is not allowed for the given client ID.` **A rejected origin never
+engages FedCM at all, so no cooldown was ever entered on that run — there was nothing to dismiss, and
+the probe cannot have passed there.**
 
-| commit | what | deploys? |
-|---|---|---|
-| `70594da` | **revert** the R9 prompt's 7 directive em-dashes. One file, exact inverse, census 12 → 19 | 🔴 **YES — server, auto-deploys on push** |
-| `684ad6a` | `O-116` in CLAUDE.md · `C-R9-1`…`C-R9-5` · `P108`–`P111` · codemod §12.7 | no |
+**The "popup reopens on repeated clicks" seen during implementation does NOT substitute.** It was
+driven the same way, against the same rejected origin, with no Google account signed in anywhere in
+this environment: click → Google's full sign-in form (never an account chooser, because there is no
+account to choose) → close the popup → click again → a second, fresh popup. That proves button mode
+has no *popup-level* cooldown of its own. It says nothing about whether FedCM's *account-chooser
+dismissal* cooldown — the one One Tap suffers from, and the whole reason this design exists — also
+applies to button mode, because that mechanism was never engaged, on any origin, by anyone, in this
+entire piece of work. **Re-run the probe on an authorised origin, with a real signed-in Google test
+account, before trusting the fix.**
 
-## 🔴 THE INCIDENT — AND BOTH HYPOTHESES WERE WRONG
+⚠️ **One new, real data point, not a substitute for the above:** the Cloudflare quick-tunnel already
+running in this environment (`https://revolution-shared-ivory-human.trycloudflare.com`, pointed at
+this same `localhost:8093`) does **not** show the 403 — measured directly this session, same
+`/gsi/button` request, 200 instead of 403, no origin-error console line, on all three auth routes.
+This is **not proof the tunnel host is on the authorised list** (Cloud Console wasn't checked) and
+the hostname is ephemeral — a new random subdomain on every tunnel restart, so it can't be added
+permanently. But it is the one origin in this environment that GSI did not reject outright, so if a
+signed-in Google account turns up before this tunnel process dies, try the real probe there first.
+Full detail: `owner-actions.md` `P114`.
 
-The Cosmic Report was failing QA (`pages=27 > 26`, `face: physiognom`). The brief's two suspects
-were our own prompt edits. **Measured against the live `reports` / `ai_generations` collections:**
+## WHAT LANDED (5 commits, Tasks 2-5 of the SDD plan under `.superpowers/sdd/2026-08-11-google-signin-account-reselection/`)
 
-**H-1 · PROSE_STYLE_RULES made it wordier — REFUTED, AND THE PREMISE WAS FALSE.**
-🔴 **PROSE_STYLE_RULES WAS NEVER IN THE R9 PROMPT.** `report.service.ts` sets
-`system: loadConfidentialPrompt()` — the .md and nothing else. The append rides `HONESTY_PREAMBLE`,
-which nine builders import and the report is not one of them. `61fd46c`'s own body says so.
+| commit | what |
+|---|---|
+| `f4d0d6e` | extract `GoogleSignInButton`, converge `login`/`signup`/`welcome` on the `Button` primitive (`login.tsx` had hand-rolled a `TouchableOpacity`) |
+| `fa370db` | split `authStore.loginWithGoogle` into acquire + `completeGoogleLogin(idToken, name)` |
+| `16c65dd` | web fork rewritten: One Tap `prompt()` and its 120s backstop **deleted**; replaced by Google's rendered button (`mountGoogleButton`) + a confirm dialog (`confirmGoogleAccount`) that runs before any server call |
+| `e3e7e36` | 5 review findings closed: in-flight guard could latch forever if an unrelated `showAlert` stomped the confirm; `atob` mangled non-ASCII names; `disabled` didn't reach Google's real button; mount effect could stack buttons / render into a detached node; one copy string covered three unrelated failures |
+| *(pending, this task)* | docs+registers: `docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5 corrected, `build-27-caveats.md` (`C-GSI-1`), `owner-actions.md` (`P113`/`P114`), this file |
 
-**H-2 · the 7 em-dash edits broke the no-face rule — REFUTED BY THE PROSE ITSELF.**
-Both `physiognom` hits are **disclosures of ABSENCE**: *"No face photograph was provided for this
-reading, so the physiognomy layer is omitted entirely."* That is the no-face rule WORKING. Section 6
-and self-check item 6 were both untouched by the edits.
+## WHAT IS VERIFIED vs. WHAT HAS NEVER RUN, ANYWHERE
 
-## 🔴 THE FIVE MECHANISMS WORTH INHERITING
+🟢 tsc clean both packages · gate exit 0 across every commit's own check · `--diff` 0 rules moved ·
+`web:export`/`verify-export` PASS · driven Chrome passes on all three routes, on both `localhost:8093`
+and the tunnel: button renders, 0 page errors, click opens a real `accounts.google.com` popup,
+close+re-click opens a fresh one (different session token) every time.
 
-**1 · A SCHEMA FIELD ADDED BY A CHANGE IS A DEPLOY MARKER FOR THAT CHANGE** (`O-116b`). Commit
-clocks say when code was *authored*. `ai_generations.emDashesRemoved` is a field the em-dash sweep
-itself added: **absent on the failing Aug-5 row, present on the Aug-6 rows.** The deploy landed
-between them, so the first failure provably ran on pre-sweep code. **With no staging and no CI that
-is the only boundary available, and it was free.**
+🔴 **No signed-in Google account existed anywhere in this work.** As a direct result, across five
+commits and two review rounds, **none of the following has ever executed, in any environment**:
+`confirmGoogleAccount`'s dialog rendering with a real name/email, a real credential reaching
+`handleCredential`, `completeGoogleLogin`'s HTTP round-trip, or the app actually completing a sign-in
+through this flow. Every claim about that half is a code read, disclosed as such in
+`task-4-report.md` / `task-4-fix-report.md` — not an observation.
 
-**2 · THE CAP HAS NEVER HAD HEADROOM, AND THE FLOOR IS WHY NOBODY LOOKED.** Every report ever:
-7223→26 · 7351→26 · 7252→**27** · 7098→26 · 7290→**27**, against `QA_PAGE_MAX = 26`. The prompt's
-length nudge (`6f1b489`) was written to clear the 17pp **FLOOR**; the ceiling was never measured.
-🔴 **And word count does not ORDER page count — 7351→26 but 7252→27** — so every "the prompt got
-wordier" theory will keep finding support in noise. `C-R9-1` / `P108`.
+🔴 **Android smoke outstanding** (`P113`): `login.tsx`'s Google button gained the primitive's fixed
+`lg` height, the one visible native change here — `tsc`/gate coverage only, no device.
 
-**3 · A LOCAL RENDER IS 3–4 PAGES SHORT, SO A LOCAL `pageCount: true` MEANS NOTHING** (`C-R9-5`).
-Measured as a free control on all five stored interpretations: −4 / −3 / −3 / −3 / −4. The
-LibreOffice-version difference was on record **only as a chart-count artifact**; it moves the page
-count by more than the gate's entire margin. 🟢 `face` / `dashes` / `sections` ARE faithful locally.
-⚠️ **`QA_PAGE_MAX` was very likely tuned on a dev box. Confirm against a container render.**
+## NEXT STEP
 
-**4 · THE FACE RULE FIRES ON THE COMPLIANCE STATEMENT, AND THE E2E DEMONSTRATED IT.** The verifying
-run wrote *"so the **face** layer is omitted"*; the failing one wrote *"so the **physiognomy** layer
-is omitted"*. **The identical sentence, one word apart** — one passes, one fails. The gate's own
-comment predicted this class (it excludes bare "face" for exactly this reason) and stopped one word
-short. `C-R9-3` / `P110`. 🔴 **Do not "fix" it by deleting the term.**
+1. Owner: get `http://localhost:8093` (and a stable origin, not just the ephemeral tunnel) onto the
+   OAuth client's authorised-origins list (`P112`/`P114`); have a signed-in Google test account ready.
+2. Re-run the Task 1 premise probe for real — a genuine observation, not a one-word reply — against
+   an origin that does not 403.
+3. Only then: device smoke (`P113`) → normal build/release cycle per `dev-notes/workflow.md`.
+4. Per the SDD ledger's owner ruling, this branch merges after the Android smoke — not before.
 
-**5 · THE PERSISTED COST UNDER-REPORTS BY HALF, AND THAT ONE IS JUST A BUG.**
-`synthesizeInterpretation` does `$set: { costEstimate }` — overwrite, not increment — so a re-Fabled
-report records only its LAST call. The Aug-6 failure shows `$1.6362`; it cost **$3.2023**. **Any
-spend figure taken from `reports.costEstimate` is low by the discarded generations.** `C-R9-2`.
+## ⚠️ CARRIED FORWARD, UNRELATED TO THIS SESSION
 
-## 🔴 WHAT THE REVERT DOES AND DOES NOT DO
+Everything the 2026-08-06 `build27.1-r9-qa-incident` handoff said about `fix/build-27.1` (the R9 QA
+page-cap incident, `P108`–`P111`, the mobile device checklist) is a **different branch and different
+tree** — untouched by this work and not superseded by it. Read that history in
+`tracking_files/claude_progress.md` if picking that branch back up.
 
-🟢 **Safe**: one real Fable-5 generation on the reverted prompt gave **em=0, en=0** with all 19
-em-dashes restored, `face` PASS, `sections` PASS. It cannot regress dash compliance.
-🔴 **NOT A FIX, and the verification says so twice**: the run produced **7466 words — the longest
-output ever recorded** (the revert made it *longer*), and 23 local pages is **26–27 in production**
-by mechanism 3. **Expect the next production report to fail again.**
-
-## 🔴 THE FOUR OWNER DECISIONS — `P108`–`P111`, and `P108` is blocking
-
-| | decision | note |
-|---|---|---|
-| 🔴 **`P108`** | raise `QA_PAGE_MAX` **and/or** take the renderer trim | ⚠️ the product copy says "18-to-26-page document" — raising the gate is a copy question too. **Do NOT reach for the word target: it does not move the page count** |
-| 🔴 **`P109`** | stop discarding a $1.6 generation for one page of LAYOUT | only ONE `PageBreak` exists (the cover), so the levers are `spacing.after` / `line` / margins — deterministic and free |
-| 🔴 **`P110`** | the face rule's missing negation context | ⚠️ guards a Play Store reclassification risk. Whatever replaces it must still fail a report that really reads a face |
-| ⚠️ **`P111`** | a retry cap? | 🟢 the "your monthly report wasn't used" copy **IS accurate** — verified in code AND in prod data (a user failed at 10:52Z and re-enqueued at 11:42Z, same `monthKey`) |
-
-## ⚠️ CARRIED FORWARD, UNTOUCHED BY THIS SESSION
-
-- 🔴 **The whole mobile device checklist from the previous handoff is unrun** — the tab cut, the wave
-  draw-in, `P105`/`P106`, the Name Destiny tile, Explore as a flat list, the lock slot at large font
-  scale, and the 3-button / clipping / comped-account / gesture checks from four handoffs ago.
-- ⚠️ **`dc6755a` (B4, sanitise-on-read) is still SERVER-ONLY and also auto-deploys on push.**
-- 🔴 **`SYNTHESIS_FABLE_ENABLED=true` in prod** — every report runs Fable 5 at `high` effort,
-  ~$1.56 per generation, ~5.5 min per call. Confirmed against the live rows.
-
-## ⚠️ STANDING RULES
-
-- 🆕 🔴 **`O-116`: A PROMPT'S DIRECTIVES ARE BEHAVIOUR, NOT PROSE.** Punctuation edits to
-  instructions that decide compliance, safety or structure must not ride a style sweep. **The
-  project got this right for the crisis classifier (`P93`) and wrong for R9 one day later.** The
-  test is not *"is this a safety prompt?"* but *"does this sentence DECIDE something?"*
-- 🔴 **`O-99` with teeth**: a plausible cause arriving at the same time as a failure is a
-  coincidence until a boundary is measured. **Two independent hypotheses fit this story and both
-  were wrong.**
-- 🔴 **`O-69`: `--diff` on every batch that adds prose to a file under a content glob.** Satisfied
-  structurally here — no such file was touched.
-- 🔴 **X1–X21 ARE PRESERVE-BLINDLY.** §4.6: the gate BLOCKS; escape hatch `GATE_LENIENT=1 git push`.
-- **No staging. One live prod backend. No CI, no test runner, no screenshot diffing, no device.**
-
-## 🧭 Register map
+## 🧭 Register map (this session's changes)
 
 | File | What it holds |
 |---|---|
-| 🔴 **`plans/build-27.1/primitives-plan.md`** | **THE PROCEDURE.** §0.0's auto-mode rules · §2 X1–X20 |
-| **`plans/build-27.1/codemod-plan.md`** | **THE METHOD.** 🆕 §12.7 = `O-116` / `O-116b` — **next free `O-117`** |
-| `plans/build-27.1/UI-revamp-design.md` | unchanged this session |
-| `build-27-caveats.md` | 🆕 § "THE R9 QA INCIDENT" — `C-R9-1`…`C-R9-5` |
-| `owner-actions.md` | Owns `P-` (**next free P112**). 🆕 `P108` the page cap · `P109` the discard + the cost bug · `P110` the face rule · `P111` the retry cap |
-| `CLAUDE.md` | 🆕 the `O-116` section, between `O-115` and the `Text.defaultProps` section |
+| `docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5 | corrected failure-decode table; notes the two-minute spinner no longer exists |
+| `build-27-caveats.md` | 🆕 `C-GSI-1` — the silent-origin-failure mechanism (owner-ruled: no code fix) |
+| `owner-actions.md` | 🆕 `P113` (Android smoke) · `P114` (origin measurement + premise blocker). **Next free `P115`** |
+| `.superpowers/sdd/2026-08-11-google-signin-account-reselection/` | full spec/plan/task ledger, including `progress.md`'s Task 1 correction |

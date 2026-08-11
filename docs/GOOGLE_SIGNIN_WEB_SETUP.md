@@ -138,22 +138,35 @@ Unset is not a safe default here.
 
 ## Step 5 — Verify
 
+**🔴 Superseded 2026-08-11.** The rows below describe the One Tap (`prompt()`) implementation. That
+code is **deleted** — the web flow now renders Google's own button (`mountGoogleButton` in
+`lib/googleSignIn.web.ts`) and confirms the account via a dialog (`confirmGoogleAccount`) before any
+server call. See `.superpowers/sdd/2026-08-11-google-signin-account-reselection/` for the design and
+implementation record. The table is corrected to match what actually happens now.
+
 Load `http://localhost:8093/login`, click **Sign in with Google**, and watch the DevTools console.
 
 | what you see | what it means |
 |---|---|
-| Google account chooser appears | 🟢 done |
-| `[GSI_LOGGER]: FedCM get() rejects with NetworkError`, then ~2 minutes of nothing, then **"Google Sign-In did not respond… this site is not authorised"** | the origin is not on the list yet, or has not propagated. Re-check step 1 |
+| Google's button renders and a click opens a popup at `accounts.google.com` | 🟢 done — the button mounted and Google accepted the click |
+| Google's button renders, a click opens a popup, **but the console shows** `error: [GSI_LOGGER]: The given origin is not allowed for the given client ID.` **and an HTTP 403 on** `https://accounts.google.com/gsi/button?...` | the origin is not on the authorised list yet, or has not propagated. Re-check step 1. 🔴 **The button still renders and the popup still opens — neither one is gated on authorisation.** What never happens is a credential: `onCredential` is simply never called, `completeGoogleLogin` never runs, and **there is no error shown to the user and no timeout.** Measured on this machine 2026-08-11 against `http://localhost:8093`, which is not yet on the authorised-origins list — see `P112` / `P113` in `owner-actions.md`. |
+| the fallback control renders instead of Google's button, and pressing it shows "Google Sign-In is unavailable" | `mountGoogleButton` itself rejected — the GSI script failed to load, or no client ID reached the bundle (see the next row) |
 | **"No Google client ID — EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID not set"** | the `.env` did not reach the bundle. Re-export with `:clear` (step 3) |
 | Google succeeds, then the app shows a network/CORS error | see the adjacent blocker below — not an OAuth problem |
 
-### Why the two-minute wait exists
+### The two-minute spinner no longer exists
 
-When the origin is unauthorized, **GSI fails internally and calls neither callback** — the promise
-would never settle, and the button would be dead with no error. `googleSignIn.web.ts:101` installs a
-120-second backstop that guarantees the promise ends and names the likely cause. It is generous on
-purpose: the account chooser is a human interaction and must not be cut off mid-decision. **A slow
-answer here is the designed behaviour, not a hang.**
+The One Tap implementation had a 120-second backstop (`googleSignIn.web.ts:101` in the old code)
+because `prompt()` could fail internally on an unauthorised origin and call neither callback, leaving
+a promise that would never settle. **That backstop, and the `prompt()` call it was protecting, are
+both deleted.** Nothing is awaited across Google's UI in the button-mode implementation — the button
+is Google's own DOM element, rendered synchronously or not at all, and a click either opens a real
+popup or (if the button never mounted) triggers the fallback's `showAlert`. There is no multi-minute
+wait state to reproduce, and if you see one, the deployed code is stale.
+
+**The corollary is the row above:** on an unauthorised origin the failure has no backstop to surface
+it, because there is nothing left in this design that runs for two minutes waiting to time out. It is
+silent by construction, not slow-then-loud. See `build-27-caveats.md` for the standing caveat.
 
 ---
 

@@ -3166,4 +3166,48 @@ API's CORS allow-list — measured, `W1-web-pwa.md:41` — so the `POST /api/aut
 successful Google prompt is blocked by the browser. That is `W1-web-pwa.md:1036`, still open.
 **Both must land, or the button fails one step later with a different error.**
 
-> ## 🔴 ▶ **NEXT FREE P-NUMBER: P113.**
+## 🆕 P113–P114 — GOOGLE SIGN-IN WEB BUTTON FLOW (2026-08-11, branch `fix/google-signin-web`)
+
+### ⚠️ `P113` — **DEVICE SMOKE OUTSTANDING: `login.tsx`'S GOOGLE BUTTON CHANGED HEIGHT ON ANDROID** · ⬜ open · owner · device smoke
+
+`login.tsx` hand-rolled a `TouchableOpacity` where `signup.tsx`/`welcome.tsx` already rendered the
+`Button` primitive. This work (commit `f4d0d6e`) converged all three screens onto a shared
+`GoogleSignInButton` that wraps the primitive, so `login.tsx`'s Google button now sits at the
+primitive's fixed `lg` height — **the one visible native change in this work.**
+
+No device was available during implementation, so this has `tsc` (clean) and gate coverage
+(`Button · adoption` 29 expected / 29 actual / 0 residue, per `primitive-adoption-check.js`'s
+contract) but **no runtime proof on Android.** 🔴 **Smoke all three auth screens
+(`login`/`signup`/`welcome`) on a device before release** — confirm the button renders at the
+correct height/position with no clipping, and that native Google sign-in still completes unchanged
+(the native `.ts` fork itself was not touched by this work; only the screens' markup and the shared
+wrapper component changed).
+
+### 🔴 `P114` — **`http://localhost:8093` IS NOT ON THE AUTHORISED-ORIGINS LIST — MEASURED, AND IT BLOCKS THE PLAN'S OWN PREMISE FROM BEING VERIFIED** · ⬜ open · owner · console change (cross-ref `P112`)
+
+Measured directly 2026-08-11, not assumed: loading `http://localhost:8093/login` and watching the
+network tab shows `https://accounts.google.com/gsi/button?...` returning **HTTP 403**, with console
+`error: [GSI_LOGGER]: The given origin is not allowed for the given client ID.` `P112` already lists
+`http://localhost:8093` as one of the four origins to add to the existing web client's Authorized
+JavaScript origins — **this measurement confirms it has not been added yet, or has not propagated.**
+
+This blocks two things: **(1)** any real sign-in test on this machine, full stop; **(2)** the design's
+own foundational premise (that Google's rendered button is exempt from the One Tap dismissal
+cooldown — see `session_handoff.md`'s CURRENT HANDOFF), which needs a real FedCM engagement with a
+signed-in Google account to observe, and FedCM cannot engage on a rejected origin at all — a popup
+opening on a rejected origin is a different, unrelated code path and proves nothing about the
+premise.
+
+⚠️ **New measurement, same session:** the Cloudflare quick-tunnel already running for browser
+testing (`https://revolution-shared-ivory-human.trycloudflare.com`, `cloudflared tunnel --url
+http://localhost:8093`) does **NOT** show this rejection — the identical `/gsi/button` request
+returns 200 with no origin-error console line, on all three auth routes. Cloud Console was not
+inspected to confirm why; this is not proof the tunnel host is formally authorised, and the hostname
+is **ephemeral** (a new random subdomain is issued every time the tunnel process restarts), so it can
+never be added to the list permanently and is not a substitute for fixing `localhost:8093`. But **if
+a signed-in Google test account becomes available while this specific tunnel process is still
+running, the premise probe is worth trying against it before doing a Cloud Console round-trip.**
+**If phone testing over that tunnel is wanted going forward, its (ephemeral) host still needs adding
+per visit — same rule as any other unauthorised origin.**
+
+> ## 🔴 ▶ **NEXT FREE P-NUMBER: P115.**

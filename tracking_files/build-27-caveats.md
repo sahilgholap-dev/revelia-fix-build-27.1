@@ -1582,3 +1582,32 @@ production pages** — i.e. the run that "passed" locally was at or over the cap
 
 ⚠️ **This also means `QA_PAGE_MAX` was very likely tuned against a dev-box render.** Whoever takes
 `P108` should confirm the constant against a CONTAINER render before choosing a number.
+
+## 🆕 GOOGLE SIGN-IN WEB BUTTON FLOW — one caveat accepted 2026-08-11 (`fix/google-signin-web`)
+
+### 🔴 `C-GSI-1` — **AN UNAUTHORISED ORIGIN FAILS SILENTLY, BY CONSTRUCTION, AND NOTHING IN-APP CAN DETECT IT**
+
+**Owner-ruled 2026-08-11: no code change.** The real fix is the owner action (`P112` / `P113`), not
+the client. Recorded here because the failure mode is permanent and worth knowing before it is
+mistaken for a regression.
+
+The button-mode implementation (`mountGoogleButton` in `lib/googleSignIn.web.ts`) has **no callback
+for an unauthorised-origin rejection** — GSI's own SDK exposes none. Measured on this machine
+2026-08-11 against `http://localhost:8093` (not on the authorised list): the console shows
+`error: [GSI_LOGGER]: The given origin is not allowed for the given client ID.` and the button's
+underlying request (`https://accounts.google.com/gsi/button?...`) comes back **HTTP 403** — but
+`document.querySelector('iframe[src*="accounts.google.com"]')` still returns truthy
+(`googleIframe: true` alongside the 403), because Google still writes the iframe element pointing at
+that URL regardless of what the URL returned. **An in-app "did the button render" check cannot see
+the difference between success and this failure — the DOM shape is identical.** A click still opens a
+real `accounts.google.com` popup too (a separate code path from the button-render request), so even
+"the popup opened" is not evidence the origin is authorised.
+
+**Symptom:** tap, popup, nothing, forever. No error toast, no timeout — the old One Tap
+implementation's 120-second backstop named this exact cause; it is deleted along with `prompt()` (see
+`docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5). The failure is indistinguishable, from inside the app, from a
+user who simply hasn't finished picking an account yet.
+
+**First thing to check when this is reported: the authorised-origins list, not the code.** `P112`
+covers adding the stable origins; `P113` covers the specific measured gap that `http://localhost:8093`
+itself is not currently on that list.
