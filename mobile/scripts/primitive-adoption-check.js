@@ -1579,9 +1579,19 @@ const CONTRACTS = [
     legacy: [],
     propRules: [],
     literals: [
-      [/if \(!router\.canGoBack\(\)\) return null;/,
-        '🔴 THE GUARD IS THE COMPONENT. Without it this is five copies of a four-line idiom and ' +
-        'three of the five adopters get a control that does nothing when pressed.'],
+      // 🔴 ASSERTS THE NESTED FORM, NOT BARE PRESENCE (O-67 family, one level up — a review
+      // finding 2026-08-11). A plain presence check on the inner literal would stay green if the
+      // guard were hoisted above the `onPress` branch, duplicated into a dead branch, or
+      // otherwise present-but-unreachable for the five original adopters, none of which pass
+      // `onPress` and all of which must still render nothing when they have no history. This
+      // checks that the literal is GOVERNED by `if (!onPress) { … }`, which is the only shape
+      // that keeps both truths at once: omit `onPress` and behaviour is untouched; supply it and
+      // the guard is skipped entirely, on purpose.
+      [/if \(!onPress\) \{\s*if \(!router\.canGoBack\(\)\) return null;\s*\}/,
+        '🔴 THE GUARD IS THE COMPONENT, AND IT MUST GOVERN, NOT MERELY BE PRESENT. Without the ' +
+        'whole nested form this is five copies of a four-line idiom and three of the five ' +
+        'adopters get a control that does nothing when pressed — and a literal-presence-only ' +
+        'check would stay green while that guard sat somewhere it no longer governs anything.'],
       [/accessibilityLabel="Go back"/,
         'an icon has no accessible name and there is no visible text to borrow one from.'],
       [/hitSlop=\{\{ top: 12, bottom: 12, left: 12, right: 12 \}\}/,
