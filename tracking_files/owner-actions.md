@@ -3250,13 +3250,26 @@ Google's chooser does not just sign the user in wrong, it creates a whole stray 
 (profile, subscription state, the lot). Removing the confirm makes that create unconditional on any
 credential Google hands back.
 
-**What replaces it.** A working back button on `/birth-data` (this session's Part 2): pressing it
-signs out (`useAuthStore().logout()`), clears Google's auto-select (`signOutGoogle()`), and returns
-to `welcome`. This makes a mis-tap **recoverable** — the user can sign in again as themselves — but
-it does **not** delete the stray account that the mis-tap already created. The owner was told this
-explicitly and accepted the trade (recoverable-after beats gated-before), so this is not a defect in
-that decision — it is the disclosed cost of it, recorded so it does not get silently rediscovered
-later as a data-hygiene surprise.
+**What replaces it, and where it does not reach.** A working back button on `/birth-data` (this
+session's Part 2, corrected after a review finding — see below): when there is no history at all —
+the first-run `replace` chain a brand-new Google sign-in lands on — pressing it clears Google's
+auto-select (`signOutGoogle()`) and signs out (`useAuthStore().logout()`, which then navigates to
+`/(auth)/login` on its own). This makes a mis-tap onto a **new** account **recoverable** — the user
+can sign in again as themselves — but it does **not** delete the stray account the mis-tap already
+created. The owner was told this explicitly and accepted the trade (recoverable-after beats
+gated-before), so this is not a defect in that decision — it is the disclosed cost of it, recorded
+so it does not get silently rediscovered later as a data-hygiene surprise.
+
+⚠️ **The reach is narrower than "a mis-tap is recoverable," full stop — one more thing to know before
+relying on it.** `/birth-data` is only where `app/index.tsx`'s post-auth routing sends a
+PROFILE-LESS account. Mis-tapping onto a Google account that already HAS a profile (i.e. the mis-tap
+picked a second, already-onboarded account rather than creating a brand-new one) routes straight to
+`/(main)/home` instead, where there is no back button at all — recovery there is the ordinary
+Profile screen's sign-out, not this mechanism. And `/birth-data`'s back button is not a blanket
+sign-out switch either (the review finding this section was corrected for): the SAME control is also
+`router.push`-reached by an already-onboarded user editing their birth data from Profile or the
+astrology hub, where it must be — and, after the fix, is — a plain pop with the session untouched.
+It only takes the sign-out path when `router.canGoBack()` is false.
 
 **What's needed to actually clean these up, none of it built here:**
 1. A server endpoint that can delete a user + its `UserProfile` (and anything else `User.create`

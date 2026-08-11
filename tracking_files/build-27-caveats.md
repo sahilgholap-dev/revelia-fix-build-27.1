@@ -1587,9 +1587,10 @@ production pages** — i.e. the run that "passed" locally was at or over the cap
 
 ### 🔴 `C-GSI-1` — **AN UNAUTHORISED ORIGIN FAILS SILENTLY, BY CONSTRUCTION, AND NOTHING IN-APP CAN DETECT IT**
 
-**Owner-ruled 2026-08-11: no code change.** The real fix is the owner action (`P112` / `P113`), not
+**Owner-ruled 2026-08-11: no code change.** The real fix is the owner action (`P112` / `P114`), not
 the client. Recorded here because the failure mode is permanent and worth knowing before it is
-mistaken for a regression.
+mistaken for a regression. (Corrected 2026-08-11 — this used to cite `P113`, which is the unrelated
+Android-device-smoke item; the origin-authorisation item is `P114`.)
 
 The button-mode implementation (`mountGoogleButton` in `lib/googleSignIn.web.ts`) has **no callback
 for an unauthorised-origin rejection** — GSI's own SDK exposes none. Measured on this machine
@@ -1609,5 +1610,8 @@ implementation's 120-second backstop named this exact cause; it is deleted along
 user who simply hasn't finished picking an account yet.
 
 **First thing to check when this is reported: the authorised-origins list, not the code.** `P112`
-covers adding the stable origins; `P113` covers the specific measured gap that `http://localhost:8093`
-itself is not currently on that list.
+covers adding the stable origins; `P114` covers the specific measured gap that `http://localhost:8093`
+itself is not currently on that list. ⚠️ `P114` was marked SUPERSEDED 2026-08-11 (the plan's premise
+that this item was blocking has since been confirmed on a different, authorised origin) — that status
+is about the premise question, not about this measurement, which still stands: `localhost:8093` is
+still not on the list as far as this repo's session history shows.

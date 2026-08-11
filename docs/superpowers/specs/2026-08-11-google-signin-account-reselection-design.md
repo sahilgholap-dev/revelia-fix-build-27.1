@@ -68,9 +68,17 @@ just no longer prevented, it is abandoned instead. Cleaning it up needs a server
 definition of "empty account," and is out of scope; it is carried as a known consequence in
 `tracking_files/owner-actions.md`.
 
-This note supersedes D1 only. D2 (rendered button, exempt from the One Tap cooldown) and D3
-(web-only) are unaffected — removing the confirm dialog changes nothing about which mode mounts
-the button or which platform this branch touches.
+This note supersedes D1's decision. **It does not, by itself, correct every section built on top of
+that decision — reviewed and found wanting 2026-08-11:** §3's architecture rows and module boundary
+(the whole `confirmGoogleAccount` API contract), §4's flow diagram and confirm-dialog sketch, two
+rows of §5's failure table, two bullets of §6's out-of-scope list, and three bullets of §7's
+verification checklist all still describe, or depend on, a dialog that no longer exists — §7's is
+the worst of these, since it is an instruction to whoever runs the pre-merge pass. **Each is now
+marked inline (🔴 STALE — see this note) at its own site, rather than rewritten**, so a reader who
+lands directly on one of those sections still gets the correct signal without having to find this
+note first. D2 (rendered button, exempt from the One Tap cooldown) and D3 (web-only) are
+UNAFFECTED — removing the confirm dialog changes nothing about which mode mounts the button or
+which platform this branch touches, and neither is marked.
 
 ### D6 — a correction found while planning
 
@@ -103,13 +111,21 @@ gap on web as a side effect. Android remains non-compliant and is out of scope h
 | file | change |
 |---|---|
 | `mobile/components/auth/GoogleSignInButton.tsx` | **new** — wraps the `Button` primitive as `variant="secondary" fullWidth size="lg"`, props `{ onPress, disabled? }`. Per D6 |
-| `mobile/components/auth/GoogleSignInButton.web.tsx` | **new** — owns the host `<div>` ref and the React lifecycle; calls `mountGoogleButton` on mount and orchestrates decode → confirm → `completeGoogleLogin` |
-| `mobile/lib/googleSignIn.web.ts` | rewritten. `prompt()` and the 120s backstop **deleted**. Retains `loadGsi()`. Gains two exports: `mountGoogleButton` and `confirmGoogleAccount` |
+| `mobile/components/auth/GoogleSignInButton.web.tsx` | **new** — owns the host `<div>` ref and the React lifecycle; calls `mountGoogleButton` on mount and orchestrates decode → confirm → `completeGoogleLogin`. 🔴 **STALE (see D1's supersede note above) — there is no confirm step.** It orchestrates decode → `completeGoogleLogin` directly |
+| `mobile/lib/googleSignIn.web.ts` | rewritten. `prompt()` and the 120s backstop **deleted**. Retains `loadGsi()`. Gains two exports: `mountGoogleButton` and `confirmGoogleAccount`. 🔴 **STALE — `confirmGoogleAccount` was deleted the same day it shipped, once D1 was superseded.** The lib gains one export now, `mountGoogleButton` (`profileFromIdToken` also exists but predates this row) |
 | `mobile/lib/googleSignIn.ts` | **untouched** |
 | `mobile/store/authStore.ts` | split `loginWithGoogle` at its existing seam (`authStore.ts:244`) into acquire + `completeGoogleLogin(idToken, name)` |
 | `mobile/app/(auth)/login.tsx` · `signup.tsx` · `welcome.tsx` | each replaces its inline `TouchableOpacity` with `<GoogleSignInButton />` |
 
 ### Module boundary — which half knows about Google
+
+🔴 **STALE — the whole `confirmGoogleAccount` contract below was deleted 2026-08-11 when D1 was
+superseded (see the note above §3). Kept verbatim rather than edited, because the code block IS the
+thing that no longer exists** — editing it in place would make this section read as current when it
+is the opposite. What replaced it: the component calls `mountGoogleButton` in a mount effect, and on
+each credential runs `profileFromIdToken` → `completeGoogleLogin` directly. No confirm step, no
+dismissal path, no `false` result to branch on — `signOutGoogle()` moved to a different caller
+entirely (`/birth-data`'s back button, added the same day; see `owner-actions.md`'s `P115`).
 
 **All GSI knowledge stays in the lib; all React stays in the component.** The component never touches
 `window.google`.
@@ -156,6 +172,20 @@ call site fails loudly rather than silently. `configureGoogleSignIn` remains the
 
 ## 4. Flow
 
+🔴 **STALE — both the diagram and the sketch below (see D1's supersede note above §3). There is no
+`confirm` step and no dialog.** The real flow, since 2026-08-11:
+
+```
+mount        loadGsi() → initialize({ client_id, callback }) → renderButton(host div)
+tap          Google opens the chooser                    ← button mode: cooldown never applies
+pick         callback({ credential })
+decode       profileFromIdToken → { name }                ← display only; the server re-verifies
+             completeGoogleLogin(idToken, name)
+             → server → storage → RevenueCat → OneSignal → router.replace('/')
+```
+
+Kept verbatim below, unedited, as the record of what shipped between `16c65dd` and its removal:
+
 ```
 mount        loadGsi() → initialize({ client_id, callback }) → renderButton(host div)
 tap          Google opens the chooser                    ← button mode: cooldown never applies
@@ -166,7 +196,7 @@ Continue     completeGoogleLogin(idToken, name)
              → server → storage → RevenueCat → OneSignal → router.replace('/')
 ```
 
-### The confirm dialog
+### The confirm dialog — 🔴 STALE, removed 2026-08-11, kept as history only
 
 ```
 Continue as Sahil Gholap
@@ -195,9 +225,9 @@ server call and nothing else.** Google's UI never blocks the app's UI.
 | **user backs out of the chooser** | no callback fires, nothing happens, the button stays live — tapping again reopens the chooser. **This is the reported bug, fixed**, because button mode is not subject to the One Tap cooldown |
 | GSI script blocked or offline | `loadGsi()` rejects → render the fallback pill; pressing it shows "Google Sign-In is unavailable — use email". **Never a dead button** |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` missing | same fallback path, retaining the existing developer-facing message |
-| `document` undefined | `showAlert` no-ops by design (`alert.web.ts:38`), so the confirm helper resolves **not-confirmed**. The promise always settles — the invariant the backstop existed to guarantee, now structural rather than timed |
+| `document` undefined | 🔴 **STALE — there is no confirm helper to resolve.** Kept as history: `showAlert` no-ops by design (`alert.web.ts:38`), so the confirm helper resolved **not-confirmed**. The promise always settled — the invariant the backstop existed to guarantee, structural rather than timed |
 | server rejects the token | unchanged — `completeGoogleLogin`'s existing catch sets the inline error |
-| a second credential arrives mid-confirm | ignored via an in-flight flag |
+| a second credential arrives mid-confirm | 🔴 **STALE label, live mechanism.** Renamed by the removal, not retired: it is now "a second credential arrives while the first is still in flight" (there is no confirm step to be mid-of), and it is still ignored via the same in-flight flag, in `GoogleSignInButton.web.tsx`'s `handleCredential` |
 
 The 120-second backstop is **deleted, not shortened**. Nothing is awaited across Google's UI anymore,
 so there is no promise left to strand.
@@ -206,9 +236,15 @@ so there is no promise left to strand.
 
 ## 6. Out of scope
 
-- **The confirm step on Android.** Same stray-account risk, deliberately deferred (D3).
-- **An avatar in the confirm dialog.** Needs an image slot in the shared dialog.
-- **Programmatic chooser re-trigger.** Superseded by D4.
+- ~~**The confirm step on Android.** Same stray-account risk, deliberately deferred (D3).~~ 🔴
+  **MOOT, not merely stale — there is no confirm step on ANY platform now (D1 superseded), so there
+  is nothing left to defer onto Android.** The stray-account risk itself is not moot; see
+  `owner-actions.md`'s `P115`.
+- ~~**An avatar in the confirm dialog.** Needs an image slot in the shared dialog.~~ 🔴 **MOOT — the
+  dialog it would have decorated is deleted.**
+- **Programmatic chooser re-trigger.** Superseded by D4. Still out of scope — this one is
+  unaffected by D1's reversal; the fallback control still just leaves Google's button in front of
+  the user rather than re-triggering it.
 - **Production origins.** `https://app.revelia.me` and `https://revelia-web.pages.dev` are not yet
   authorised and the Pages project does not exist — tracked as `P112` in `owner-actions.md`.
 - **CORS for the deployed origin.** `W1-web-pwa.md:1036`, still open. Google Sign-In succeeding does
@@ -227,10 +263,16 @@ so there is no promise left to strand.
 5. Driven browser pass over the tunnel build:
    - Google's button renders on login, signup and welcome
    - **dismiss the chooser, tap again — the chooser reopens** (the regression this exists to prevent)
-   - the confirm shows the correct name and email
-   - "Use a different account" leaves the user signed out and on the auth screen
-   - Escape and backdrop-tap behave identically to "Use a different account"
-   - Continue signs in and lands on the correct post-auth route
+   - ~~the confirm shows the correct name and email~~ 🔴 **STALE — do NOT run this check. There is
+     no confirm; a credential goes straight to `completeGoogleLogin`.** (D1 superseded, 2026-08-11)
+   - ~~"Use a different account" leaves the user signed out and on the auth screen~~ 🔴 **STALE —
+     that control does not exist.** Recovery from a mis-tapped account is now `/birth-data`'s back
+     button (sign out + `signOutGoogle()` — see `owner-actions.md`'s `P115` for what it does and
+     does not cover) or, for an account that already has a profile, Profile → sign out.
+   - ~~Escape and backdrop-tap behave identically to "Use a different account"~~ 🔴 **STALE — same
+     reason; there is no dialog for Escape or a backdrop-tap to dismiss.**
+   - a credential signs in and lands on the correct post-auth route (unchanged in effect; "Continue"
+     is no longer a separate tap — the credential itself is now what triggers this)
 6. `no-white-on-accent` read after the batch (permanently report-only). The new pill uses
    `t.color.surface` with foreground `fg`, no accent fill, so the `A5 pair` rule is not engaged.
 
