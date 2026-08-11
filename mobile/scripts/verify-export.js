@@ -145,6 +145,77 @@ if (!fs.existsSync(mfOut)) {
   }
 }
 
+// ── 6 · NOTHING SHIPS FROM A node_modules PATH ────────────────────────────────
+//
+// 🔴 THE DEFECT THAT FORCED IT, and it is this file's own class of bug one layer
+// out: CLOUDFLARE PAGES SILENTLY REFUSES TO UPLOAD ANY FILE UNDER A
+// `node_modules` DIRECTORY. Expo's web export writes every vendored asset to a
+// path mirroring its source, so all 37 of them — every @expo/vector-icons font
+// plus the react-navigation and expo-router images — landed under
+// `dist/assets/node_modules/` and none of them reached the CDN.
+//
+// The failure is invisible from every angle that matters. The export succeeds.
+// The files are present in dist/. The local server serves them, because it reads
+// the disk. Android is unaffected, because the fonts are bundled natively. And
+// on the deployed site the request does not even 404: `_redirects` rewrites
+// `/*` to index.html with a 200, so the browser receives HTML where it asked for
+// a TTF, fails to parse it, and renders nothing. Measured 2026-08-11:
+// the icon font returned `text/html`, 4037 bytes, while an app font sitting in
+// `assets/assets/fonts/` on the same origin returned `font/ttf`, 51384 bytes.
+//
+// `flatten-vendor-assets.js` relocates the directory and rewrites the
+// references. This assertion is what stops it silently regressing — a rename in
+// the export, a new vendored asset, or the script being dropped from the chain
+// would all put files back on a path that never ships.
+{
+  const offenders = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === 'node_modules') offenders.push(path.relative(DIST, p));
+        else walk(p);
+      }
+    }
+  };
+  walk(DIST);
+
+  if (offenders.length) {
+    bad(
+      'no shipped file sits under a node_modules path',
+      `${offenders.length} such director(y|ies): ${offenders.join(', ')} — ` +
+        'Cloudflare Pages will not upload these. Run flatten-vendor-assets.js.'
+    );
+  } else {
+    ok('no shipped file sits under a node_modules path');
+  }
+
+  // The directory move is only half the fix; a reference left pointing at the
+  // old path is just as dead, and reads as present because the file exists.
+  const refs = [];
+  const scan = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) scan(p);
+      else if (/\.(js|css|html|json)$/.test(e.name)) {
+        if (fs.readFileSync(p, 'utf8').includes('/assets/node_modules/')) {
+          refs.push(path.relative(DIST, p));
+        }
+      }
+    }
+  };
+  scan(DIST);
+
+  if (refs.length) {
+    bad(
+      'no shipped file references /assets/node_modules/',
+      `${refs.length} file(s): ${refs.slice(0, 3).join(', ')}`
+    );
+  } else {
+    ok('no shipped file references /assets/node_modules/');
+  }
+}
+
 console.log('── verify-export ──');
 console.log(`  failures                      ${fail.length}`);
 if (fail.length) {
