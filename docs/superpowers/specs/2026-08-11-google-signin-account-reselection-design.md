@@ -53,6 +53,25 @@ handoff.
 | D5 | **The confirm reuses `showAlert`**, not a new component | A bespoke modal. `lib/alert.web.ts` already solves this exact problem, and its header documents why imperative DOM beats a React host for non-render-tree callers |
 | D6 | **The shared component wraps the `Button` primitive** (`variant="secondary" fullWidth size="lg"`) | Reproducing `login.tsx`'s hand-rolled `TouchableOpacity`. See the correction below |
 
+### D1 — SUPERSEDED 2026-08-11, by owner decision, after this plan shipped
+
+**The confirm dialog is REMOVED.** On a credential, the web button now calls
+`completeGoogleLogin` directly — no "Continue as <name>" step, no `confirmGoogleAccount`. The
+owner reversed the original call: a mis-tapped Google account is made **recoverable after the
+fact** (a working back button on `/birth-data`, which signs out and clears Google's auto-select
+before returning to `welcome`) rather than **gated up front**.
+
+**The trade-off named in D1's own rejected-alternative column is the one now accepted, explicitly
+and with its cost disclosed, not rediscovered:** the server still does `User.create` on a first
+Google sign-in, so a mis-tapped account still creates a stray Revelia account — that account is
+just no longer prevented, it is abandoned instead. Cleaning it up needs a server endpoint and a
+definition of "empty account," and is out of scope; it is carried as a known consequence in
+`tracking_files/owner-actions.md`.
+
+This note supersedes D1 only. D2 (rendered button, exempt from the One Tap cooldown) and D3
+(web-only) are unaffected — removing the confirm dialog changes nothing about which mode mounts
+the button or which platform this branch touches.
+
 ### D6 — a correction found while planning
 
 An earlier draft of this spec said the pill would be "extracted verbatim from `login.tsx:223`."

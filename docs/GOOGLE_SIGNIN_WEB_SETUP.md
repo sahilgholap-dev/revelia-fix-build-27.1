@@ -138,11 +138,16 @@ Unset is not a safe default here.
 
 ## Step 5 — Verify
 
-**🔴 Superseded 2026-08-11.** The rows below describe the One Tap (`prompt()`) implementation. That
-code is **deleted** — the web flow now renders Google's own button (`mountGoogleButton` in
-`lib/googleSignIn.web.ts`) and confirms the account via a dialog (`confirmGoogleAccount`) before any
-server call. See `.superpowers/sdd/2026-08-11-google-signin-account-reselection/` for the design and
-implementation record. The table is corrected to match what actually happens now.
+**🔴 Superseded 2026-08-11 (twice — read both).** The rows below originally described the One Tap
+(`prompt()`) implementation; that code was already deleted once this table was first corrected, in
+favour of Google's own rendered button (`mountGoogleButton` in `lib/googleSignIn.web.ts`). **A second
+change landed the same day, by owner decision: the confirm dialog that first correction still
+describes (`confirmGoogleAccount`, "Continue as <name>" before any server call) has been REMOVED.**
+On a credential, `GoogleSignInButton.web.tsx` now calls `completeGoogleLogin` directly — there is no
+confirmation step between the chooser and the server call. A mis-tapped account is recoverable
+afterward (a working back button on `/birth-data`) rather than gated up front. See
+`.superpowers/sdd/2026-08-11-google-signin-account-reselection/` for the design record and its D1
+supersede note. The table below is corrected again to match what actually happens now.
 
 Load `http://localhost:8093/login`, click **Sign in with Google**, and watch the DevTools console.
 
@@ -150,7 +155,7 @@ Load `http://localhost:8093/login`, click **Sign in with Google**, and watch the
 |---|---|
 | Google's button renders and a click opens a popup at `accounts.google.com` | 🟢 done — the button mounted and Google accepted the click |
 | Google's button renders, a click opens a popup, **but the console shows** `error: [GSI_LOGGER]: The given origin is not allowed for the given client ID.` **and an HTTP 403 on** `https://accounts.google.com/gsi/button?...` | the origin is not on the authorised list yet, or has not propagated. Re-check step 1. 🔴 **The button still renders and the popup still opens — neither one is gated on authorisation.** What never happens is a credential: `onCredential` is simply never called, `completeGoogleLogin` never runs, and **there is no error shown to the user and no timeout.** Measured on this machine 2026-08-11 against `http://localhost:8093`, which is not yet on the authorised-origins list — see `P112` / `P113` in `owner-actions.md`. |
-| the fallback control renders instead of Google's button, and pressing it shows "Google Sign-In is unavailable" | `mountGoogleButton` itself rejected — the GSI script failed to load, or no client ID reached the bundle (see the next row) |
+| the fallback control renders instead of Google's button, and pressing it shows a **"Sign In Unavailable"** alert reading **"Google Sign In is not available in this browser. Please use another sign-in method."** | `mountGoogleButton` itself rejected — the GSI script failed to load, or no client ID reached the bundle (see the next row). ⚠️ These are the exact title/body strings as written in `GoogleSignInButton.web.tsx`'s `MOUNT_FAILURE_TITLE`/`MOUNT_FAILURE_BODY`. They are close to, but NOT, the native copy — `login.tsx`/`welcome.tsx` show "Google Sign In is unavailable. Please try again or use another sign-in method." on a native Google failure, which does not exist on web at all. Match the web string above, never the native one. |
 | **"No Google client ID — EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID not set"** | the `.env` did not reach the bundle. Re-export with `:clear` (step 3) |
 | Google succeeds, then the app shows a network/CORS error | see the adjacent blocker below — not an OAuth problem |
 

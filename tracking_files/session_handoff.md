@@ -6,83 +6,119 @@
 
 ## CURRENT HANDOFF
 
-**Written by**: `google-signin-web-task5` | 2026-08-11
-**Branch**: `fix/google-signin-web` (cut from `master` at `50e174a`, NOT `fix/build-27.1`) — 🟢 **5
-commits, tree otherwise clean** (one unrelated, unstaged `mobile/public/sw.js` timestamp bump from
-running `web:export` during verification — not committed). **NOT YET MERGED.**
-**`npx tsc --noEmit`**: 🟢 **mobile 0 / server 0** (both re-run this session, zero output either way).
-**`npm run gate`**: 🟢 **exit 0** (Button contract 29 expected / 29 actual / 0 residue; the
-report-only `no-white-on-accent` hits are all pre-existing — none in `login.tsx`, `signup.tsx`,
-`welcome.tsx`, or `GoogleSignInButton*`). **`web:export` / `verify-export`**: 🟢 PASS, re-run this
-session. **`--diff`** not re-run this session and did not need to be — no file under a Tailwind
-content glob changed since Task 4 last checked it at 0 rules moved.
+**Written by**: `google-signin-web-followup` | 2026-08-11
+**Branch**: `fix/google-signin-web` (cut from `master` at `50e174a`, NOT `fix/build-27.1`) —
+8 commits, tree otherwise clean (one unrelated, unstaged `mobile/public/sw.js` timestamp bump from
+running `web:export` during verification — not committed, same as every prior session on this
+branch). **NOT YET MERGED.**
+**`npx tsc --noEmit`**: 🟢 **mobile 0 / server 0**.
+**`npm run gate`**: 🟢 **exit 0** (`Button · adoption` 29/29/0, `BackButton · adoption` 5/5/0 — the
+new `onPress` prop did not disturb the contract).
+**`node scripts/resolve-utilities.js --diff`**: 🟢 **0 rule(s) moved, of 200 seen** (before/after
+snapshots taken across this session's edits to `app/(capture)/birth-data.tsx`,
+`components/auth/GoogleSignInButton.web.tsx`, `components/ui/BackButton.tsx`,
+`lib/googleSignIn.web.ts` — all four are under a Tailwind content glob).
+`--members`: 🟢 0 unresolved.
+**`npm run web:export`**: 🟢 PASS (`verify-export`: 0 failures).
+**Driven Chrome pass**: 🟢 see below — this is the first session on this branch where the credential
+path and the back button were actually exercised live, not just read.
 
-# 🔴 THE PLAN'S PREMISE IS UNVERIFIED. DO NOT TRUST THE FIX UNTIL IT IS.
+# 🟢 THE PREMISE IS CONFIRMED. THE PRIOR HANDOFF'S HEADLINE WAS RIGHT TO DOUBT IT AND IS NOW WRONG TO REPEAT.
 
-The whole design rests on one claim: **Google's rendered button is exempt from the One Tap dismissal
-cooldown.** A probe (`gsi-probe.html`) was written specifically to test this and this ledger recorded
-it as **PASS**. 🔴 **That record was wrong.** It was taken from the owner's one-word reply
-("working"), not an observation, and re-measured independently later: the origin the probe ran
-against (`http://localhost:8093`) returns `HTTP 403` and
-`[GSI_LOGGER]: The given origin is not allowed for the given client ID.` **A rejected origin never
-engages FedCM at all, so no cooldown was ever entered on that run — there was nothing to dismiss, and
-the probe cannot have passed there.**
+The previous handoff opened with "THE PLAN'S PREMISE IS UNVERIFIED — DO NOT TRUST THE FIX UNTIL IT
+IS," because every prior probe had run against a rejected origin (`http://localhost:8093`, HTTP 403,
+`[GSI_LOGGER]: The given origin is not allowed for the given client ID.`) with no Google account
+signed in anywhere in the environment. **That has since been resolved by the owner, not by this
+session.** The owner ran the flow for real, on an authorised origin, with a signed-in Google test
+account, and reported three specific observations — not a one-word reply this time:
 
-**The "popup reopens on repeated clicks" seen during implementation does NOT substitute.** It was
-driven the same way, against the same rejected origin, with no Google account signed in anywhere in
-this environment: click → Google's full sign-in form (never an account chooser, because there is no
-account to choose) → close the popup → click again → a second, fresh popup. That proves button mode
-has no *popup-level* cooldown of its own. It says nothing about whether FedCM's *account-chooser
-dismissal* cooldown — the one One Tap suffers from, and the whole reason this design exists — also
-applies to button mode, because that mechanism was never engaged, on any origin, by anyone, in this
-entire piece of work. **Re-run the probe on an authorised origin, with a real signed-in Google test
-account, before trusting the fix.**
+1. the **"Continue as <name>" confirm dialog appeared before sign-in completed** — proving the
+   credential hand-off out of Google's button and into `completeGoogleLogin` executed for real, not
+   merely that a popup opened;
+2. **dismissing the chooser and tapping the button again reopened it** — the exact premise the whole
+   design rests on (button mode is exempt from the One Tap dismissal cooldown), confirmed by
+   observation rather than by the popup-level-only substitute this branch's earlier sessions had to
+   settle for;
+3. **sign-in completed end to end.**
 
-⚠️ **One new, real data point, not a substitute for the above:** the Cloudflare quick-tunnel already
-running in this environment (`https://revolution-shared-ivory-human.trycloudflare.com`, pointed at
-this same `localhost:8093`) does **not** show the 403 — measured directly this session, same
-`/gsi/button` request, 200 instead of 403, no origin-error console line, on all three auth routes.
-This is **not proof the tunnel host is on the authorised list** (Cloud Console wasn't checked) and
-the hostname is ephemeral — a new random subdomain on every tunnel restart, so it can't be added
-permanently. But it is the one origin in this environment that GSI did not reject outright, so if a
-signed-in Google account turns up before this tunnel process dies, try the real probe there first.
-Full detail: `owner-actions.md` `P114`.
+**Independent corroboration, from the branch review rather than from the owner's run:** FedCM's
+dismissal embargo applies to *passive* mode (`google.accounts.id.prompt()`, the One Tap surface this
+whole rewrite moved away from) — `renderButton` drives *active* mode, which is not subject to that
+embargo. That is a mechanism-level reason to expect observation (2) to hold generally, not just on
+the one run it was seen on.
 
-## WHAT LANDED (5 commits, Tasks 2-5 of the SDD plan under `.superpowers/sdd/2026-08-11-google-signin-account-reselection/`)
+`owner-actions.md`'s `P114` (the item that was hedging on the tunnel-origin workaround) is marked
+**SUPERSEDED** with this same record, not closed silently — read it before assuming the origin
+question is fully resolved; `P112` (get `localhost:8093` itself onto the authorised list, for
+day-to-day local dev) is still open and is a separate, narrower thing from the premise question.
+
+## 🔴 BUT DO NOT READ THAT AS COVERAGE OF WHAT THIS BRANCH NOW SHIPS
+
+**The confirm dialog the owner's observation (1) is about has been REMOVED, THIS SESSION, by owner
+decision.** The owner reversed the original call: no more "Continue as <name>" gate between the
+chooser and the server call. Instead `/birth-data` gets a working back button that signs out and
+clears Google's auto-select, making a mis-tapped account **recoverable after the fact** rather than
+**gated up front**. The owner was told explicitly this is not a like-for-like swap — the server still
+does `User.create` on first Google sign-in, so a mis-tapped account still creates a stray Revelia
+account, it is simply no longer prevented — and accepted that trade. Do not re-argue it; see
+`owner-actions.md`'s new `P115` and the design doc's D1 supersede note
+(`.superpowers/sdd/2026-08-11-google-signin-account-reselection/`).
+
+**So the fact that survives from the owner's run is narrower than "the dialog works": it is that a
+real credential reaches `completeGoogleLogin` and completes sign-in, on an authorised origin, with
+button-mode's reopen-on-redismiss behaving as designed.** That is exactly the half this session was
+able to re-verify independently — see below — using a stand-in for Google's SDK rather than a real
+account, since no signed-in Google account exists in this sandboxed environment either.
+
+## WHAT LANDED THIS SESSION (3 commits, on top of the branch's existing 5)
 
 | commit | what |
 |---|---|
-| `f4d0d6e` | extract `GoogleSignInButton`, converge `login`/`signup`/`welcome` on the `Button` primitive (`login.tsx` had hand-rolled a `TouchableOpacity`) |
-| `fa370db` | split `authStore.loginWithGoogle` into acquire + `completeGoogleLogin(idToken, name)` |
-| `16c65dd` | web fork rewritten: One Tap `prompt()` and its 120s backstop **deleted**; replaced by Google's rendered button (`mountGoogleButton`) + a confirm dialog (`confirmGoogleAccount`) that runs before any server call |
-| `e3e7e36` | 5 review findings closed: in-flight guard could latch forever if an unrelated `showAlert` stomped the confirm; `atob` mangled non-ASCII names; `disabled` didn't reach Google's real button; mount effect could stack buttons / render into a detached node; one copy string covered three unrelated failures |
-| *(pending, this task)* | docs+registers: `docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5 corrected, `build-27-caveats.md` (`C-GSI-1`), `owner-actions.md` (`P113`/`P114`), this file |
+| `3bf98b2` | **Confirm dialog removed (web only).** `GoogleSignInButton.web.tsx` calls `completeGoogleLogin` directly on a credential; `confirmGoogleAccount` deleted from `lib/googleSignIn.web.ts`; `signOutGoogle` kept (export-parity set). `profileFromIdToken`'s doc comment corrected — it no longer claims the decoded fields are confirm-dialog-only; `name` does travel to the server. |
+| `4815722` | **`/birth-data`'s back button made functional.** `BackButton.tsx` gained an optional `onPress` that, when supplied, skips the `canGoBack()` guard entirely (byte-identical when omitted — the literal `if (!router.canGoBack()) return null;` is unchanged, five other call sites unaffected). `birth-data.tsx` wires it to `logout()` + `signOutGoogle()` (wrapped in try/catch at the call site — the native fork's `signOutGoogle` is not defensive on its own) + `router.replace('/(auth)/welcome')`. |
+| *(this commit)* | **Docs + registers.** `docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5: fixed the fallback-copy string — web's real copy is "Sign In Unavailable" / "Google Sign In is not available in this browser…", which the doc had wrong (it quoted the DIFFERENT native copy, "Google Sign In is unavailable. Please try again…", `login.tsx`/`welcome.tsx`'s string) — and marked the confirm-dialog description stale. Design doc's D1 gets a dated supersede note. `owner-actions.md`: `P113` widened (secondary variant also drops the outline and turns the label gold — both AA, both expected), `P114` superseded with this record, new `P115` (orphaned-account cleanup — cause, not yet a fix). This file. |
 
-## WHAT IS VERIFIED vs. WHAT HAS NEVER RUN, ANYWHERE
+## WHAT IS VERIFIED vs. WHAT STILL HAS NOT RUN AGAINST A REAL GOOGLE ACCOUNT
 
-🟢 tsc clean both packages · gate exit 0 across every commit's own check · `--diff` 0 rules moved ·
-`web:export`/`verify-export` PASS · driven Chrome passes on all three routes, on both `localhost:8093`
-and the tunnel: button renders, 0 page errors, click opens a real `accounts.google.com` popup,
-close+re-click opens a fresh one (different session token) every time.
+🟢 **Verified live in a driven Chrome session this session, against the REAL app tree** (expo-router,
+real `authStore`, real `BackButton`, real `GoogleSignInButton.web.tsx`) **with only the Google-SDK
+and backend network edges faked** (no real Google account exists in this sandbox; the GSI script
+itself was intercepted and replaced with a stand-in that renders a clickable div and invokes the
+same `initialize({callback})` Google's real script would, with a synthetic ID token):
+- clicking the credential handler runs `completeGoogleLogin` **immediately** — no backdrop, no
+  "Continue as…" text, no "Continue with this Google account" text appears at any point;
+- `POST /api/auth/google` fires with body `{"idToken":"…","name":"Ada Lovelace"}` — `name` really
+  does travel to the server, matching the corrected `profileFromIdToken` comment;
+- navigating straight to `/birth-data` as an authenticated-but-no-profile-yet user (seeded via
+  localStorage + mocked `/auth/me` + `/profile` 404) renders the "Tell us about yourself" screen
+  **with a visible back arrow** — before this session that control rendered `null` there, because the
+  real route is reached via two `router.replace()`s with no history;
+- clicking it navigates to `/(auth)/welcome` and a `POST /auth/logout` is observed — `logout()` ran;
+- the same click, run with `window.google` never having been loaded on that route at all (no
+  `GoogleSignInButton` mounts on `/birth-data`), threw nothing — the email/Apple-user edge case the
+  brief called out survives by construction, not by luck.
 
-🔴 **No signed-in Google account existed anywhere in this work.** As a direct result, across five
-commits and two review rounds, **none of the following has ever executed, in any environment**:
-`confirmGoogleAccount`'s dialog rendering with a real name/email, a real credential reaching
-`handleCredential`, `completeGoogleLogin`'s HTTP round-trip, or the app actually completing a sign-in
-through this flow. Every claim about that half is a code read, disclosed as such in
-`task-4-report.md` / `task-4-fix-report.md` — not an observation.
+🔴 **Still never run against a REAL signed-in Google account, by this session or any prior one**:
+the actual GSI script's own FedCM behaviour (this session's stand-in proves our code's reaction to a
+credential, not Google's willingness to hand one out) — that half is the owner's observation above,
+not a re-derivation of it.
 
-🔴 **Android smoke outstanding** (`P113`): `login.tsx`'s Google button gained the primitive's fixed
-`lg` height, the one visible native change here — `tsc`/gate coverage only, no device.
+🔴 **Android smoke still outstanding** (`P113`, widened this session): no device available. The
+Google button on all three auth screens is unchanged by this session's work (Part 1 was web-only by
+construction — `GoogleSignInButton.web.tsx` and `lib/googleSignIn.web.ts` do not ship on Android; Part
+2's `BackButton`/`birth-data.tsx` changes are cross-platform but additive-only for a screen Android
+already visits identically otherwise). The pre-existing outline/label-colour change from the
+`Button`-primitive convergence (prior sessions) is still what needs a device to confirm, now with one
+more sentence in `P113` about what to expect.
 
 ## NEXT STEP
 
-1. Owner: get `http://localhost:8093` (and a stable origin, not just the ephemeral tunnel) onto the
-   OAuth client's authorised-origins list (`P112`/`P114`); have a signed-in Google test account ready.
-2. Re-run the Task 1 premise probe for real — a genuine observation, not a one-word reply — against
-   an origin that does not 403.
-3. Only then: device smoke (`P113`) → normal build/release cycle per `dev-notes/workflow.md`.
-4. Per the SDD ledger's owner ruling, this branch merges after the Android smoke — not before.
+1. Device smoke (`P113`) — the only hard blocker the SDD ledger's owner ruling named for merge.
+2. `P112` (get `localhost:8093` itself authorised) is still open for anyone doing further local web
+   testing, independent of the above.
+3. `P115` (orphaned-account cleanup) is a real gap but explicitly out of scope for this branch — do
+   not block merge on it; it needs its own server-side scoping.
+4. Then: normal build/release cycle per `dev-notes/workflow.md`.
 
 ## ⚠️ CARRIED FORWARD, UNRELATED TO THIS SESSION
 
@@ -95,7 +131,10 @@ tree** — untouched by this work and not superseded by it. Read that history in
 
 | File | What it holds |
 |---|---|
-| `docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5 | corrected failure-decode table; notes the two-minute spinner no longer exists |
-| `build-27-caveats.md` | 🆕 `C-GSI-1` — the silent-origin-failure mechanism (owner-ruled: no code fix) |
-| `owner-actions.md` | 🆕 `P113` (Android smoke) · `P114` (origin measurement + premise blocker). **Next free `P115`** |
-| `.superpowers/sdd/2026-08-11-google-signin-account-reselection/` | full spec/plan/task ledger, including `progress.md`'s Task 1 correction |
+| `mobile/components/auth/GoogleSignInButton.web.tsx` · `mobile/lib/googleSignIn.web.ts` | confirm dialog removed (web only); `profileFromIdToken` doc corrected |
+| `mobile/components/ui/BackButton.tsx` | optional `onPress`, guard-skip when supplied, byte-identical otherwise |
+| `mobile/app/(capture)/birth-data.tsx` | wires the back button to `logout()` + `signOutGoogle()` (try/catch at call site) + `router.replace('/(auth)/welcome')` |
+| `docs/GOOGLE_SIGNIN_WEB_SETUP.md` §5 | real fallback-copy string quoted verbatim; confirm-dialog description marked stale |
+| `docs/superpowers/specs/2026-08-11-google-signin-account-reselection-design.md` | D1 supersede note (dated, appended, history not rewritten) |
+| `owner-actions.md` | `P113` widened (outline/label-colour sentence) · `P114` superseded (owner's real observations) · 🆕 `P115` (orphaned-account cleanup). **Next free `P116`** |
+| `.superpowers/sdd/2026-08-11-google-signin-account-reselection/followup-report.md` | this session's full verification record — paste of every command's actual output |

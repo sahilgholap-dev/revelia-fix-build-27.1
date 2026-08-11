@@ -3183,7 +3183,35 @@ correct height/position with no clipping, and that native Google sign-in still c
 (the native `.ts` fork itself was not touched by this work; only the screens' markup and the shared
 wrapper component changed).
 
-### 🔴 `P114` — **`http://localhost:8093` IS NOT ON THE AUTHORISED-ORIGINS LIST — MEASURED, AND IT BLOCKS THE PLAN'S OWN PREMISE FROM BEING VERIFIED** · ⬜ open · owner · console change (cross-ref `P112`)
+⚠️ **Widened 2026-08-11 — height is not the only visible change.** Measured against
+`components/ui/Button.tsx`: `login.tsx`'s Google button now renders the `secondary` variant, which
+(1) has **no border at all** (`containerStyle` for `secondary` sets no `borderWidth`/`borderColor`,
+unlike `outline`) — the old hand-rolled pill's 1px `border-border-strong` outline is gone — and (2)
+labels itself in **`t.color.accent`** (gold), not the plain foreground — `secondary`'s `labelColor`
+resolves to `onSurfaceLabel` (`= t.color.accent` when enabled), where the old markup used
+`text-fg`. **Both still pass AA on the `secondary` fill and neither is a defect** — record them so
+whoever runs the smoke expects gold text and a vanished outline instead of reading them as bugs.
+
+### 🔴 `P114` — **`http://localhost:8093` IS NOT ON THE AUTHORISED-ORIGINS LIST — MEASURED, AND IT BLOCKS THE PLAN'S OWN PREMISE FROM BEING VERIFIED** · 🟢 **SUPERSEDED 2026-08-11 — THE OWNER RAN THE PROBE FOR REAL** · owner / console change (cross-ref `P112`)
+
+🟢 **The premise this item was hedging about is now CONFIRMED, by observation, not by the tunnel
+workaround this item was tracking.** The owner ran the flow on an authorised origin and reported
+three specific things: (1) the "Continue as <name>" confirm dialog appeared **before** sign-in
+completed — proving the credential hand-off and `completeGoogleLogin` executed for real, not just
+that a popup opened; (2) dismissing the chooser and tapping the button again **reopened it** — the
+button-mode-is-exempt-from-cooldown premise, confirmed; (3) sign-in completed end to end. See
+`session_handoff.md`'s CURRENT HANDOFF for the full record, including the independent corroboration
+from the branch review (FedCM's dismissal embargo applies to passive `prompt()` mode; `renderButton`
+drives active mode, which is not embargoed).
+
+🔴 **BUT READ THIS BEFORE TRUSTING IT AS COVERAGE OF WHAT SHIPS NOW: what was verified was the
+CREDENTIAL PATH, not a dialog that still exists.** The confirm dialog observed in (1) has since been
+**REMOVED by owner decision** (this session, 2026-08-11) — see `.superpowers/sdd/2026-08-11-google-signin-account-reselection/`'s D1 supersede note. The verified fact that survives is that a real
+credential reaches `completeGoogleLogin` and completes sign-in on an authorised origin; the dialog
+itself is gone. The original hedge text (kept below for the trail) is superseded, not merely
+softened — do not carry it forward as an open blocker.
+
+**The original entry follows, superseded:**
 
 Measured directly 2026-08-11, not assumed: loading `http://localhost:8093/login` and watching the
 network tab shows `https://accounts.google.com/gsi/button?...` returning **HTTP 403**, with console
@@ -3210,4 +3238,37 @@ running, the premise probe is worth trying against it before doing a Cloud Conso
 **If phone testing over that tunnel is wanted going forward, its (ephemeral) host still needs adding
 per visit — same rule as any other unauthorised origin.**
 
-> ## 🔴 ▶ **NEXT FREE P-NUMBER: P115.**
+## 🆕 P115 — ORPHANED GOOGLE ACCOUNTS, A KNOWN CONSEQUENCE OF REMOVING THE CONFIRM DIALOG (2026-08-11, branch `fix/google-signin-web`)
+
+### ⚠️ `P115` — **NO CLEANUP PATH FOR A MIS-TAPPED GOOGLE SIGN-IN'S STRAY ACCOUNT** · ⬜ open · owner + eng · needs a server endpoint, out of scope for this branch
+
+**Cause.** This session removed the "Continue as <name>" confirm dialog by owner decision (see the
+D1 supersede note in `.superpowers/sdd/2026-08-11-google-signin-account-reselection/`'s design doc,
+and `session_handoff.md`). The dialog existed specifically because the server does `User.create` on
+a first Google sign-in (`auth.service.ts`'s `loginWithGoogle`) — without it, a mis-tapped account in
+Google's chooser does not just sign the user in wrong, it creates a whole stray Revelia account
+(profile, subscription state, the lot). Removing the confirm makes that create unconditional on any
+credential Google hands back.
+
+**What replaces it.** A working back button on `/birth-data` (this session's Part 2): pressing it
+signs out (`useAuthStore().logout()`), clears Google's auto-select (`signOutGoogle()`), and returns
+to `welcome`. This makes a mis-tap **recoverable** — the user can sign in again as themselves — but
+it does **not** delete the stray account that the mis-tap already created. The owner was told this
+explicitly and accepted the trade (recoverable-after beats gated-before), so this is not a defect in
+that decision — it is the disclosed cost of it, recorded so it does not get silently rediscovered
+later as a data-hygiene surprise.
+
+**What's needed to actually clean these up, none of it built here:**
+1. A server endpoint that can delete a user + its `UserProfile` (and anything else `User.create`
+   fans out to for a Google signup) — there is currently no such route for a self-service or
+   admin-triggered delete of an *abandoned* account specifically.
+2. A definition of "empty"/"abandoned" — e.g. `authProvider: 'google'`, no `birthData`, no readings,
+   created-but-never-returned-to. Get this wrong in either direction and it either deletes accounts
+   someone is mid-onboarding on, or never fires for the accounts it exists for.
+3. A decision on trigger: a cron sweep, an on-demand admin action, or something client-triggered from
+   the same back-button moment that creates the recovery path in the first place.
+
+None of that is in scope for this branch. Recorded here as a known, accepted consequence with its
+cause — not a bug to chase, but do not let it get lost either.
+
+> ## 🔴 ▶ **NEXT FREE P-NUMBER: P116.**
