@@ -8,6 +8,7 @@ import compression from 'compression';
 import { errorHandler } from './middleware/error.middleware';
 import { mountRoutes } from './routes';
 import { logger } from './utils/logger';
+import { resolveProductionCorsOrigins } from './utils/cors';
 import { productionConfig } from './config/production';
 
 /**
@@ -60,9 +61,30 @@ if (isProduction) {
 }
 
 // CORS configuration
+//
+// 🔴 IN PRODUCTION THIS USED TO IGNORE `CORS_ORIGIN` ENTIRELY, so adding an
+//    origin was a code change and a deploy rather than a variable and a
+//    restart. That cost a round trip when the web PWA went up: Google Sign-In
+//    completed and the POST after it was blocked by the browser, which reads as
+//    an auth bug and is not one.
+//
+//    `CORS_ORIGIN` is now ADDITIVE in production — the hardcoded list is the
+//    floor and the variable can only extend it. It cannot narrow or replace it,
+//    so a typo in the dashboard can never lock the first-party apps out.
+//    Non-production behaviour is unchanged.
+//    The parsing lives in utils/cors.ts so a check can invoke it — importing
+//    this file would run the entire app setup.
 const corsOrigin = isProduction
-  ? productionConfig.cors.origin
+  ? resolveProductionCorsOrigins(productionConfig.cors.origin, process.env.CORS_ORIGIN, (m) =>
+      logger.warn(m)
+    )
   : process.env.CORS_ORIGIN || '*';
+
+if (isProduction) {
+  // Print the resolved list, because the failure mode is invisible from the
+  // server side — a blocked request looks identical to one that was never made.
+  logger.info(`✓ CORS allow-list (${(corsOrigin as string[]).length}): ${(corsOrigin as string[]).join(', ')}`);
+}
 
 app.use(
   cors({

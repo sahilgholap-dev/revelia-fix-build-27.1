@@ -11,6 +11,7 @@
     "check:prose": "ts-node --transpile-only src/scripts/check-prose-sanitiser.ts",
     "check:tier": "ts-node --transpile-only src/scripts/effective-tier.check.ts",
     "check:ailog": "ts-node --transpile-only src/scripts/ai-generation-log.check.ts",
+    "check:cors": "ts-node --transpile-only src/scripts/cors-origins.check.ts",
     "migrate:date-format": "ts-node --transpile-only src/scripts/migrate-monthly-reading-date-format.ts",
     "migrate:date-format:dry": "ts-node --transpile-only src/scripts/migrate-monthly-reading-date-format.ts --dry-run",
     "backfill:geocode": "ts-node --transpile-only src/scripts/backfill-geocode.ts",
