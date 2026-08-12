@@ -403,13 +403,28 @@ export default function Profile() {
                 value={preferences?.notifications || false}
                 onValueChange={async (value) => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  updatePreferences({ notifications: value });
-                  if (value) {
-                    await requestNotificationPermission();
-                    await optInToNotifications();
-                  } else {
+                  if (!value) {
+                    updatePreferences({ notifications: false });
                     await optOutOfNotifications();
+                    return;
                   }
+                  // 🔴 THE WRITE WAITS FOR THE ANSWER. This used to set the
+                  //    preference first and ask afterwards, so a denied prompt
+                  //    left the switch reading ON while push was off — the app
+                  //    telling the user something false about their own
+                  //    settings, in the one screen where they went to check.
+                  //
+                  //    Web is what surfaced it: a browser permission denial is
+                  //    common and effectively permanent, where an Android grant
+                  //    almost always succeeds. The native path gets the same
+                  //    honesty for free.
+                  const granted = await requestNotificationPermission();
+                  if (!granted) {
+                    updatePreferences({ notifications: false });
+                    return;
+                  }
+                  await optInToNotifications();
+                  updatePreferences({ notifications: true });
                 }}
                 trackColor={{ false: t.color['border-subtle'], true: t.color.accent }}
                 thumbColor={preferences?.notifications ? t.color['on-accent'] : t.color.fg}

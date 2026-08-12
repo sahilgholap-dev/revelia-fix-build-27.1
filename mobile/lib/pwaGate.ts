@@ -15,3 +15,14 @@ export type PwaGateMode = 'none' | 'install-instructions' | 'android-play';
 export function pwaGateMode(): PwaGateMode {
   return 'none';
 }
+
+/**
+ * Native IS the installed app, so this is unconditionally true.
+ *
+ * The web fork uses it to decide whether asking for notification permission can
+ * succeed at all; on native the platform's own permission flow applies and
+ * there is no tab-versus-app distinction to make.
+ */
+export function isStandaloneDisplay(): boolean {
+  return true;
+}

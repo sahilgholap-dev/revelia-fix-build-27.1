@@ -41,7 +41,14 @@ function isIosDevice(ua: string, maxTouchPoints: number): boolean {
   return /Macintosh/.test(ua) && maxTouchPoints > 1;
 }
 
-function isStandalone(): boolean {
+/**
+ * Whether the page is running as an installed app rather than a browser tab.
+ *
+ * Exported because web push needs the same test: iOS rejects the notification
+ * permission API outside an installed PWA. A second copy of this logic in the
+ * push module is exactly the kind of duplicate that drifts, so there is one.
+ */
+export function isStandaloneDisplay(): boolean {
   // Trap 2: check both, because older iOS installs only set the second.
   const byDisplayMode = window.matchMedia?.('(display-mode: standalone)')?.matches === true;
   const byLegacyFlag = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -56,7 +63,7 @@ export function pwaGateMode(): PwaGateMode {
 
   // Installed is installed, whichever platform — this is the app, not a tab.
   // Checked before either branch so an installed user is never asked to install.
-  if (isStandalone()) return 'none';
+  if (isStandaloneDisplay()) return 'none';
 
   if (isIosDevice(ua, navigator.maxTouchPoints || 0)) return 'install-instructions';
 

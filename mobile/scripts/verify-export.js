@@ -240,6 +240,34 @@ if (!fs.existsSync(mfOut)) {
   }
 }
 
+// ── 7 · the OneSignal service worker shipped ──────────────────────────────────
+//
+// 🔴 NOTHING IMPORTS THIS FILE. It is a static asset the browser fetches at
+// subscription time, so a build change that drops it produces no typecheck
+// error, no gate failure and no bundle warning — the first symptom is web push
+// silently failing to subscribe, on a surface nobody exercises daily. That is
+// the same shape as the vendored-icon defect, which shipped invisible icons for
+// a full deploy cycle because every local signal was green.
+{
+  const oneSignalSw = path.join(DIST, 'push', 'onesignal', 'OneSignalSDKWorker.js');
+  if (!fs.existsSync(oneSignalSw)) {
+    bad(
+      'OneSignal service worker shipped',
+      'dist/push/onesignal/OneSignalSDKWorker.js is missing. Web push cannot ' +
+        'subscribe without it, and nothing else in the build would notice.'
+    );
+  } else if (!fs.readFileSync(oneSignalSw, 'utf8').includes('OneSignalSDK.sw.js')) {
+    bad(
+      'OneSignal service worker shipped',
+      'the file exists but does not import OneSignalSDK.sw.js — it would register ' +
+        'and then do nothing, which is worse than being absent because the ' +
+        'registration looks healthy.'
+    );
+  } else {
+    ok('OneSignal service worker shipped');
+  }
+}
+
 console.log('── verify-export ──');
 console.log(`  failures                      ${fail.length}`);
 if (fail.length) {
