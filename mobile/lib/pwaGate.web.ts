@@ -18,19 +18,22 @@
  *      navigator.standalone first and older installs still report only that.
  *      Miss it and an installed user is shown instructions for installing.
  *
- *  3 · EVERY iOS BROWSER IS SAFARI UNDERNEATH. Chrome, Firefox and Edge on
- *      iPhone are WebKit wearing a different shell, so all of them carry
- *      "Safari" in the user agent. They are told apart only by their own
- *      marker — CriOS, FxiOS, EdgiOS, OPiOS — and testing for "Safari"
- *      alone identifies all four as Safari.
+ *  3 · 🔴 DO NOT REINTRODUCE A SAFARI-ONLY BRANCH. An earlier version of this
+ *      file sent Chrome, Firefox and Edge users to a "Safari required" screen,
+ *      on the belief that Add to Home Screen was Safari-only. THAT HAS BEEN
+ *      FALSE SINCE iOS 16.4 (March 2023): Apple opened the API to third-party
+ *      browsers and Chrome for iOS shipped support that July. The result is a
+ *      real standalone web app honouring the manifest, not a browser shortcut,
+ *      so trap 2's check sees it correctly. The old branch told users to switch
+ *      browsers for no reason — corrected after an iPhone 15 install from
+ *      Chrome disproved it. Only iOS below 16.4 still needs Safari, and the
+ *      instructions carry one line for that rather than a second screen and a
+ *      version parser.
  *
  * Export parity with the native fork is asserted by scripts/web-fork-check.js.
  */
 
-export type PwaGateMode = 'none' | 'install-instructions' | 'open-in-safari';
-
-/** Markers the non-Safari iOS browsers put in their own user agent. */
-const NON_SAFARI_IOS = /CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|YaBrowser/;
+export type PwaGateMode = 'none' | 'install-instructions';
 
 function isIosDevice(ua: string, maxTouchPoints: number): boolean {
   if (/iPad|iPhone|iPod/.test(ua)) return true;
@@ -55,37 +58,5 @@ export function pwaGateMode(): PwaGateMode {
   // Already installed — this is the app, not a tab. Nothing to ask for.
   if (isStandalone()) return 'none';
 
-  // Trap 3: the marker identifies the shell; "Safari" alone does not.
-  return NON_SAFARI_IOS.test(ua) ? 'open-in-safari' : 'install-instructions';
-}
-
-/**
- * Attempts to reopen the current URL in Safari.
- *
- * ⚠️ THIS CANNOT BE RELIED ON AND THE CALLER MUST NOT PRETEND OTHERWISE. iOS
- * exposes no supported way for a web page to launch Safari; the `x-safari-`
- * prefix is an Apple-internal scheme that has worked from third-party iOS
- * browsers on some versions and been closed on others. When it is blocked the
- * navigation is simply ignored — no error, no event, nothing to catch.
- *
- * So this is a best effort, and every caller must offer a path that does not
- * depend on it. `copyCurrentUrl` is that path.
- */
-export function tryOpenInSafari(): void {
-  try {
-    window.location.href = `x-safari-${window.location.href}`;
-  } catch {
-    // Blocked schemes throw in some shells and are silently dropped in others.
-    // Either way the fallback is what the user actually needs.
-  }
-}
-
-/** Copies the current URL. Returns false if the browser refuses, so the UI can say so. */
-export async function copyCurrentUrl(): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(window.location.href);
-    return true;
-  } catch {
-    return false;
-  }
+  return 'install-instructions';
 }

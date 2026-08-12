@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { Button } from '@/components/ui/Button';
-import { pwaGateMode, tryOpenInSafari, copyCurrentUrl } from '@/lib/pwaGate.web';
+import { pwaGateMode } from '@/lib/pwaGate.web';
 import * as t from '@/theme';
 
 /**
@@ -14,23 +13,43 @@ import * as t from '@/theme';
  *    resolves here, because there is no router underneath to resolve anything
  *    else.
  *
+ * ONE SCREEN FOR EVERY iOS BROWSER. Chrome, Firefox and Edge on iPhone have
+ * been able to install web apps since iOS 16.4, so the steps below are worded
+ * without naming a browser and the closing line covers the pre-16.4 tail. See
+ * lib/pwaGate.web.ts trap 3 for why an earlier Safari-only branch was wrong.
+ *
  * The mode is read ONCE, at mount. It cannot change without a page load: a user
  * does not switch browsers or install an app mid-session, and re-reading it on
  * every render would only add a way for the tree to flicker.
  *
- * Android and desktop are untouched — see lib/pwaGate.web.ts for why iOS alone
- * gets this treatment.
+ * Android and desktop are untouched.
  */
 export function InstallGate({ children }: { children: React.ReactNode }) {
   const [mode] = useState(pwaGateMode);
 
   if (mode === 'none') return <>{children}</>;
-  return mode === 'open-in-safari' ? <OpenInSafari /> : <InstallInstructions />;
+  return <InstallInstructions />;
 }
 
-// ── shared shell ──────────────────────────────────────────────────────────────
+const STEPS: { n: string; title: string; detail: string }[] = [
+  {
+    n: '1',
+    title: 'Tap the Share button',
+    detail: 'The square with an arrow pointing up — in the toolbar in Safari, in the ⋯ menu in Chrome.',
+  },
+  {
+    n: '2',
+    title: 'Choose Add to Home Screen',
+    detail: 'Scroll down the share sheet if you do not see it straight away.',
+  },
+  {
+    n: '3',
+    title: 'Tap Add, then open Revelia',
+    detail: 'It appears on your Home Screen and opens like any other app.',
+  },
+];
 
-function Shell({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
+function InstallInstructions() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: t.color.bg }}
@@ -41,40 +60,27 @@ function Shell({ eyebrow, title, children }: { eyebrow: string; title: string; c
         paddingVertical: t.space[10],
       }}
     >
-      <Text {...t.txt('overline')} style={{ ...t.txt('overline').style, color: t.color.accent, marginBottom: t.space[3] }}>
-        {eyebrow}
+      <Text
+        {...t.txt('overline')}
+        style={{ ...t.txt('overline').style, color: t.color.accent, marginBottom: t.space[3] }}
+      >
+        One quick step
       </Text>
-      <Text {...t.txt('display-sm')} style={{ ...t.txt('display-sm').style, color: t.color.fg, marginBottom: t.space[4] }}>
-        {title}
+
+      <Text
+        {...t.txt('display-sm')}
+        style={{ ...t.txt('display-sm').style, color: t.color.fg, marginBottom: t.space[4] }}
+      >
+        Add Revelia to your Home Screen
       </Text>
-      {children}
-    </ScrollView>
-  );
-}
 
-function Body({ children }: { children: React.ReactNode }) {
-  return (
-    <Text {...t.txt('text-sm')} style={{ ...t.txt('text-sm').style, color: t.color['fg-secondary'], marginBottom: t.space[6] }}>
-      {children}
-    </Text>
-  );
-}
-
-// ── iOS + Safari: how to install ──────────────────────────────────────────────
-
-const STEPS: { n: string; title: string; detail: string }[] = [
-  { n: '1', title: 'Tap the Share button', detail: 'The square with an arrow pointing up, in Safari’s toolbar.' },
-  { n: '2', title: 'Choose Add to Home Screen', detail: 'Scroll down the share sheet if you do not see it straight away.' },
-  { n: '3', title: 'Tap Add, then open Revelia', detail: 'It appears on your Home Screen like any other app.' },
-];
-
-function InstallInstructions() {
-  return (
-    <Shell eyebrow="One quick step" title="Add Revelia to your Home Screen">
-      <Body>
+      <Text
+        {...t.txt('text-sm')}
+        style={{ ...t.txt('text-sm').style, color: t.color['fg-secondary'], marginBottom: t.space[6] }}
+      >
         Revelia runs as an app on iPhone. Installing takes about ten seconds and gives you full
         screen, offline access and notifications.
-      </Body>
+      </Text>
 
       {STEPS.map((step) => (
         <View key={step.n} style={{ flexDirection: 'row', marginBottom: t.space[5] }}>
@@ -94,6 +100,7 @@ function InstallInstructions() {
               {step.n}
             </Text>
           </View>
+
           <View style={{ flex: 1 }}>
             <Text {...t.txt('text-base')} style={{ ...t.txt('text-base').style, color: t.color.fg }}>
               {step.title}
@@ -105,67 +112,27 @@ function InstallInstructions() {
         </View>
       ))}
 
-      <Text
-        {...t.txt('text-xs')}
+      <View
         style={{
-          ...t.txt('text-xs').style,
-          color: t.color['fg-muted'],
           marginTop: t.space[2],
           borderTopWidth: t.a11y.hairline,
           borderTopColor: t.color['border-subtle'],
           paddingTop: t.space[4],
         }}
       >
-        Already added it? Open Revelia from your Home Screen rather than this tab.
-      </Text>
-    </Shell>
-  );
-}
-
-// ── iOS + another browser: only Safari can install ────────────────────────────
-
-function OpenInSafari() {
-  // 🔴 THE HAND-OFF CANNOT BE CONFIRMED. iOS gives a page no supported way to
-  //    launch Safari and no signal when the attempt is refused — see
-  //    tryOpenInSafari. So the copy-link path is revealed on the first tap
-  //    regardless of whether the hand-off worked: if it did, this screen is
-  //    gone and nobody reads it; if it did not, the way forward is already
-  //    on screen instead of the user tapping a dead control repeatedly.
-  const [attempted, setAttempted] = useState(false);
-  const [copied, setCopied] = useState<boolean | null>(null);
-
-  return (
-    <Shell eyebrow="Safari required" title="Open this page in Safari">
-      <Body>
-        iPhone can only add apps to the Home Screen from Safari — the other browsers do not offer
-        it. Open Revelia in Safari and the install takes about ten seconds.
-      </Body>
-
-      <Button
-        title="Open in Safari"
-        onPress={() => {
-          setAttempted(true);
-          tryOpenInSafari();
-        }}
-        variant="primary"
-        fullWidth
-        size="lg"
-      />
-
-      {attempted ? (
-        <View style={{ marginTop: t.space[6] }}>
-          <Text {...t.txt('text-sm')} style={{ ...t.txt('text-sm').style, color: t.color['fg-secondary'], marginBottom: t.space[3] }}>
-            Still here? Your browser blocked the hand-off. Copy the link and paste it into Safari.
-          </Text>
-          <Button
-            title={copied === true ? 'Link copied' : copied === false ? 'Copy failed — select the address bar' : 'Copy link'}
-            onPress={async () => setCopied(await copyCurrentUrl())}
-            variant="secondary"
-            fullWidth
-            size="lg"
-          />
-        </View>
-      ) : null}
-    </Shell>
+        {/* The pre-16.4 tail. Those versions really are Safari-only, and this
+            line is cheaper and more durable than parsing a version out of a
+            user agent to show them a different screen. */}
+        <Text {...t.txt('text-xs')} style={{ ...t.txt('text-xs').style, color: t.color['fg-muted'] }}>
+          No Add to Home Screen in your browser? Open this page in Safari instead.
+        </Text>
+        <Text
+          {...t.txt('text-xs')}
+          style={{ ...t.txt('text-xs').style, color: t.color['fg-muted'], marginTop: t.space[2] }}
+        >
+          Already added it? Open Revelia from your Home Screen rather than this tab.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }

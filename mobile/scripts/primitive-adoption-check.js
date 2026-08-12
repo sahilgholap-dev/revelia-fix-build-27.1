@@ -324,12 +324,6 @@ const CONTRACTS = [
       //    primitive rather than leaving a dead control. Same contract, same reason, one
       //    platform over.
       'components/auth/GoogleSignInButton.web.tsx',
-      // 🆕 DECLARED — the iOS install gate (2026-08-11). Web-only: on an iPhone in a browser
-      //    it renders install instructions INSTEAD of the navigator, and its two controls
-      //    (the Safari hand-off and the copy-link fallback beneath it) are this primitive.
-      //    It is the first screen an iPhone user ever sees, so it is also the last place a
-      //    hand-rolled control should appear.
-      'components/InstallGate.web.tsx',
     ],
     // 🔴 THE TWO CAMERA SCREENS ARE THE ONLY REAL "MUST NOT", and the reason is not style.
     //    Their controls are a shutter and a gallery affordance: circular, icon-only, sized to the
