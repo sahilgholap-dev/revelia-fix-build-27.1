@@ -33,6 +33,8 @@
  * Export parity with the native fork is asserted by scripts/web-fork-check.js.
  */
 
+import { PLAY_STORE_URL, androidLaunchIntentUrl } from './storeLinks';
+
 export type PwaGateMode = 'none' | 'install-instructions' | 'android-play';
 
 function isIosDevice(ua: string, maxTouchPoints: number): boolean {
@@ -92,6 +94,45 @@ export async function openInSafariAndCopy(): Promise<boolean> {
   }
 
   return copied;
+}
+
+/**
+ * Opens the installed Android app, or the Play listing if it is not installed.
+ *
+ * ONE CONTROL, TWO DESTINATIONS, and unlike the iOS Safari hand-off this one can
+ * actually be made reliable — because on Android a failed hand-off IS detectable.
+ *
+ * Two layers, in order:
+ *
+ *  1 · the intent URL. Chrome reads `browser_fallback_url` and goes to Play by
+ *      itself when the package is absent, so for Chrome — and the Chromium
+ *      browsers that make up nearly all of Android — this alone is correct.
+ *
+ *  2 · a visibility check, for the browsers that ignore `intent://` outright and
+ *      simply do nothing. If we are still here and still VISIBLE a moment later,
+ *      the hand-off did not take, so the Play listing is opened directly. When
+ *      the app or Play does open, this tab goes to the background and
+ *      visibilityState is no longer 'visible', so the timer becomes a no-op.
+ *
+ * 🔴 THE SECOND LAYER IS WHY THIS CAN BE A SINGLE BUTTON. Without it, a browser
+ *    that drops intent URLs would leave a control that does nothing at all —
+ *    the dead-button failure this project has now met four times. With it, every
+ *    path ends somewhere useful, so the visible fallback link is no longer
+ *    needed to guarantee an exit.
+ *
+ * Worst case is a duplicate navigation to Play, which is the same destination
+ * the user asked for.
+ */
+export function openAndroidAppOrPlay(): void {
+  if (typeof window === 'undefined') return;
+
+  window.location.href = androidLaunchIntentUrl();
+
+  window.setTimeout(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      window.location.href = PLAY_STORE_URL;
+    }
+  }, 1200);
 }
 
 export function pwaGateMode(): PwaGateMode {

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Linking, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { pwaGateMode, openInSafariAndCopy } from '@/lib/pwaGate.web';
-import { PLAY_STORE_URL, androidLaunchIntentUrl } from '@/lib/storeLinks';
+import { pwaGateMode, openInSafariAndCopy, openAndroidAppOrPlay } from '@/lib/pwaGate.web';
 import * as t from '@/theme';
 
 /**
@@ -44,25 +43,16 @@ function AndroidGetTheApp() {
         a moment to install.
       </Lede>
 
-      {/* 🔴 TWO ROUTES, DELIBERATELY, AND THE SECOND IS THE ONE THAT ALWAYS WORKS.
-          The intent opens the app for someone who already has it and falls through
-          to Play for someone who does not — but browser_fallback_url is a Chrome
-          feature and other Android browsers vary, some ignoring intent URLs
-          outright. The plain link below is an ordinary anchor: no scheme games, no
-          browser-specific behaviour, works everywhere. */}
-      <Action
-        label="Open Revelia"
-        emphasis="primary"
-        onPress={() => Linking.openURL(androidLaunchIntentUrl())}
-      />
-      <Action
-        label="Get it on Google Play"
-        emphasis="secondary"
-        onPress={() => Linking.openURL(PLAY_STORE_URL)}
-      />
+      {/* ONE CONTROL, TWO DESTINATIONS. It opens the app for someone who already
+          has it and the Play listing for someone who does not, so the user never
+          has to know which of those they are — see openAndroidAppOrPlay for how
+          the second case is caught even in browsers that ignore intent URLs. This
+          replaced a two-button version whose visible fallback existed only to
+          guarantee an exit; that guarantee now lives in the handler. */}
+      <Action label="Get it on Google Play" emphasis="primary" onPress={openAndroidAppOrPlay} />
 
       <Footnote>
-        Already installed? Open Revelia from your app drawer rather than this tab.
+        Already installed? This opens it. You can also launch Revelia from your app drawer.
       </Footnote>
     </Screen>
   );
