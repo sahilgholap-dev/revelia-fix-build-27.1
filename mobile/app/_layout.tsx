@@ -24,6 +24,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { installTextDefaults } from '@/lib/textDefaults';
 import { registerServiceWorker } from '@/lib/registerSw';
 import { setNavigationReady, safeNavigate } from '@/lib/navigationReady';
+import { InstallGate } from '@/components/InstallGate';
 import '../global.css';
 import * as t from '@/theme';
 
@@ -389,20 +390,29 @@ export default function RootLayout() {
                   problem: text reflows automatically when a webfont finishes loading. So web
                   gives up nothing here, and NATIVE BEHAVIOUR IS UNCHANGED — the condition below
                   still evaluates to `fontsReady` on iOS and Android. */}
+              {/* 🔴 THE INSTALL GATE WRAPS THE STACK RATHER THAN REDIRECTING TO A ROUTE.
+                  On iOS in a browser it renders install instructions INSTEAD of the navigator,
+                  which is what makes it unescapable: there is no route to navigate away from
+                  and no history entry to go back through, and every deep link resolves to it
+                  because no router is mounted underneath. A redirect would give all three away.
+                  Inert everywhere else — the native fork renders its children untouched, so
+                  Android and both native builds are unaffected. See components/InstallGate.tsx. */}
               {(fontsReady || Platform.OS === 'web') ? (
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: BRAND_BG },
-                    animation: 'fade',
-                  }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(main)" />
-                  <Stack.Screen name="(capture)" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="(paywall)" options={{ presentation: 'modal' }} />
-                </Stack>
+                <InstallGate>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: BRAND_BG },
+                      animation: 'fade',
+                    }}
+                  >
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(main)" />
+                    <Stack.Screen name="(capture)" options={{ presentation: 'modal' }} />
+                    <Stack.Screen name="(paywall)" options={{ presentation: 'modal' }} />
+                  </Stack>
+                </InstallGate>
               ) : null}
             </View>
           </ErrorBoundary>
