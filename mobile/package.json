@@ -46,6 +46,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-store-review": "~8.1.5",
     "expo-updates": "~0.28.18",
+    "html-to-image": "^1.11.13",
     "nativewind": "^4.1.23",
     "onesignal-expo-plugin": "^2.7.0",
     "react": "19.0.0",
