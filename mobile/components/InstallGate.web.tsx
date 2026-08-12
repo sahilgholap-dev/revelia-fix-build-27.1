@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { pwaGateMode, openInSafariAndCopy } from '@/lib/pwaGate.web';
 import { PLAY_STORE_URL, androidLaunchIntentUrl } from '@/lib/storeLinks';
 import * as t from '@/theme';
@@ -162,23 +163,69 @@ function Action({
   );
 }
 
-const STEPS: { n: string; title: string; detail: string }[] = [
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/**
+ * The steps, each carrying the glyph(s) of the control it is talking about.
+ *
+ * ⚠️ THE ICONS ARE SUPPLEMENTARY, NEVER LOAD-BEARING. On web the icon font loads
+ * asynchronously, so there is a window where a glyph has not arrived — and this
+ * screen is the first thing an iPhone visitor sees, sometimes on a cold cache.
+ * Every step therefore names its control in words too. If the font never
+ * arrives, the instructions still read correctly; the chips just look empty.
+ *
+ * ⚠️ These are Ionicons approximations of Apple's own glyphs, not the real SF
+ * Symbols — close enough to recognise in a toolbar, not pixel-identical. Every
+ * name is verified present in the shipped glyph map; a name that is absent
+ * renders as blank tofu, which would be worse than showing nothing.
+ */
+const STEPS: { n: string; title: string; detail: string; icons: IconName[] }[] = [
   {
     n: '1',
     title: 'Tap the Share button',
-    detail: 'The square with an arrow pointing up — in the toolbar in Safari, in the ⋯ menu in Chrome.',
+    detail: 'A square with an arrow pointing up — in the toolbar in Safari, in the ⋯ menu in Chrome.',
+    icons: ['share-outline', 'ellipsis-horizontal'],
   },
   {
     n: '2',
     title: 'Choose Add to Home Screen',
     detail: 'Scroll down the share sheet if you do not see it straight away.',
+    icons: ['add-outline'],
   },
   {
     n: '3',
     title: 'Tap Add, then open Revelia',
     detail: 'It appears on your Home Screen and opens like any other app.',
+    icons: ['phone-portrait-outline'],
   },
 ];
+
+/**
+ * A glyph in a bordered square, so it reads as "the control looks like this"
+ * rather than as decoration next to a sentence.
+ *
+ * Surface fill and a subtle border — no accent fill, so the single-legal-
+ * foreground rule for accent grounds does not come into play here.
+ */
+function GlyphChip({ name }: { name: IconName }) {
+  return (
+    <View
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: t.radius.md,
+        backgroundColor: t.color.surface,
+        borderWidth: t.a11y.hairline,
+        borderColor: t.color['border-subtle'],
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: t.space[2],
+      }}
+    >
+      <Ionicons name={name} size={19} color={t.color['fg-secondary']} />
+    </View>
+  );
+}
 
 function InstallInstructions() {
   return (
@@ -214,6 +261,11 @@ function InstallInstructions() {
             <Text {...t.txt('text-sm')} style={{ ...t.txt('text-sm').style, color: t.color['fg-muted'] }}>
               {step.detail}
             </Text>
+            <View style={{ flexDirection: 'row', marginTop: t.space[2] }}>
+              {step.icons.map((icon) => (
+                <GlyphChip key={icon} name={icon} />
+              ))}
+            </View>
           </View>
         </View>
       ))}
