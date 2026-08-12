@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ScrollView, Pressable, Linking, Image } from 'react-native';
 import { pwaGateMode, openInSafariAndCopy } from '@/lib/pwaGate.web';
 import { PLAY_STORE_URL, androidLaunchIntentUrl } from '@/lib/storeLinks';
 import * as t from '@/theme';
@@ -163,66 +162,92 @@ function Action({
   );
 }
 
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
-
 /**
- * The steps, each carrying the glyph(s) of the control it is talking about.
+ * The steps, each with a real screenshot of the control it describes.
  *
- * ⚠️ THE ICONS ARE SUPPLEMENTARY, NEVER LOAD-BEARING. On web the icon font loads
- * asynchronously, so there is a window where a glyph has not arrived — and this
- * screen is the first thing an iPhone visitor sees, sometimes on a cold cache.
- * Every step therefore names its control in words too. If the font never
- * arrives, the instructions still read correctly; the chips just look empty.
+ * 🔴 THESE ARE `require`d RATHER THAN FETCHED FROM public/ ON PURPOSE. A require
+ *    goes through Metro, so a missing or renamed file FAILS THE BUILD. A URL into
+ *    public/ would 404 at runtime — and worse, `_redirects` rewrites a 404 to
+ *    index.html with a 200, so the browser would receive HTML where it asked for
+ *    a PNG and simply render nothing. That is the exact shape of the invisible-
+ *    icon defect this project already shipped once.
  *
- * ⚠️ These are Ionicons approximations of Apple's own glyphs, not the real SF
- * Symbols — close enough to recognise in a toolbar, not pixel-identical. Every
- * name is verified present in the shipped glyph map; a name that is absent
- * renders as blank tofu, which would be worse than showing nothing.
+ * ⚠️ THE IMAGES ARE SUPPLEMENTARY, NEVER LOAD-BEARING. This is the first screen
+ *    an iPhone visitor sees, sometimes on a cold cache, so every step still names
+ *    its control in words. If an image never arrives the instructions still read
+ *    correctly.
+ *
+ * ⚠️ `width`/`height` are the sources' NATIVE pixel dimensions. Scaling a 200px-
+ *    wide capture up to fill the column would blur it, and a blurred screenshot
+ *    of a UI is harder to match against the real thing than a small sharp one.
  */
-const STEPS: { n: string; title: string; detail: string; icons: IconName[] }[] = [
+const STEPS: {
+  n: string;
+  title: string;
+  detail: string;
+  shot: number;
+  width: number;
+  height: number;
+  alt: string;
+}[] = [
   {
     n: '1',
     title: 'Tap the Share button',
     detail: 'A square with an arrow pointing up — in the toolbar in Safari, in the ⋯ menu in Chrome.',
-    icons: ['share-outline', 'ellipsis-horizontal'],
+    shot: require('../assets/install/step-1-share-button.png'),
+    width: 200,
+    height: 16,
+    alt: "Safari's bottom toolbar, with the Share button third from the left",
   },
   {
     n: '2',
     title: 'Choose Add to Home Screen',
     detail: 'Scroll down the share sheet if you do not see it straight away.',
-    icons: ['add-outline'],
+    shot: require('../assets/install/step-2-share-sheet.png'),
+    width: 200,
+    height: 335,
+    alt: 'The iOS share sheet, with Add to Home Screen arrowed in the list',
   },
   {
     n: '3',
     title: 'Tap Add, then open Revelia',
     detail: 'It appears on your Home Screen and opens like any other app.',
-    icons: ['phone-portrait-outline'],
+    shot: require('../assets/install/step-3-confirm.png'),
+    // The only step shown ABOVE its native 133px, so the two thin strips share a
+    // width instead of reading as an accident. A 1.5x upscale softens it, which
+    // is the lesser cost: at native size its label is too small to read at all.
+    width: 200,
+    height: 23,
+    alt: 'The Add to Home Screen dialog, with Add at the top right',
   },
 ];
 
 /**
- * A glyph in a bordered square, so it reads as "the control looks like this"
- * rather than as decoration next to a sentence.
+ * A screenshot, framed so it reads as a picture of the phone's UI rather than as
+ * part of ours.
  *
- * Surface fill and a subtle border — no accent fill, so the single-legal-
- * foreground rule for accent grounds does not come into play here.
+ * The captures are light-mode iOS on a near-black page, so they need an explicit
+ * edge — without one they float as bright rectangles with no relationship to the
+ * layout.
  */
-function GlyphChip({ name }: { name: IconName }) {
+function StepShot({ step }: { step: (typeof STEPS)[number] }) {
   return (
     <View
       style={{
-        width: 34,
-        height: 34,
+        alignSelf: 'flex-start',
+        marginTop: t.space[3],
         borderRadius: t.radius.md,
-        backgroundColor: t.color.surface,
         borderWidth: t.a11y.hairline,
         borderColor: t.color['border-subtle'],
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: t.space[2],
+        overflow: 'hidden',
       }}
     >
-      <Ionicons name={name} size={19} color={t.color['fg-secondary']} />
+      <Image
+        source={step.shot}
+        accessibilityLabel={step.alt}
+        style={{ width: step.width, height: step.height }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -261,11 +286,7 @@ function InstallInstructions() {
             <Text {...t.txt('text-sm')} style={{ ...t.txt('text-sm').style, color: t.color['fg-muted'] }}>
               {step.detail}
             </Text>
-            <View style={{ flexDirection: 'row', marginTop: t.space[2] }}>
-              {step.icons.map((icon) => (
-                <GlyphChip key={icon} name={icon} />
-              ))}
-            </View>
+            <StepShot step={step} />
           </View>
         </View>
       ))}
