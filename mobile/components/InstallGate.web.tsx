@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Linking, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { pwaGateMode, openInSafariAndCopy } from '@/lib/pwaGate.web';
 import { PLAY_STORE_URL, androidLaunchIntentUrl } from '@/lib/storeLinks';
 import * as t from '@/theme';
@@ -163,6 +164,26 @@ function Action({
 }
 
 /**
+ * A glyph sitting inline in a sentence.
+ *
+ * Ionicons is a FONT, so a glyph nested in a Text flows and sits on the baseline
+ * like any other character — no vertical nudging needed. Size and colour are
+ * matched to the surrounding step detail rather than set independently, so the
+ * icon reads as part of the sentence rather than as a badge dropped into it.
+ *
+ * ⚠️ This is the one place an icon carries meaning the words no longer state:
+ * the sentence used to describe the share control ("a square with an arrow
+ * pointing up") and now shows it instead. If the icon font fails to load the
+ * sentence loses that description — which is acceptable ONLY because the
+ * screenshot directly beneath shows the same control in situ. Do not use an
+ * inline glyph as the sole carrier of an instruction anywhere without that
+ * backstop.
+ */
+function InlineGlyph({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
+  return <Ionicons name={name} size={16} color={t.color['fg-secondary']} />;
+}
+
+/**
  * The steps, each with a real screenshot of the control it describes.
  *
  * 🔴 THESE ARE `require`d RATHER THAN FETCHED FROM public/ ON PURPOSE. A require
@@ -184,7 +205,7 @@ function Action({
 const STEPS: {
   n: string;
   title: string;
-  detail: string;
+  detail: React.ReactNode;
   shot: number;
   width: number;
   height: number;
@@ -193,7 +214,12 @@ const STEPS: {
   {
     n: '1',
     title: 'Tap the Share button',
-    detail: 'A square with an arrow pointing up — in the toolbar in Safari, in the ⋯ menu in Chrome.',
+    detail: (
+      <>
+        <InlineGlyph name="share-outline" /> in the toolbar in Safari, or{' '}
+        <InlineGlyph name="ellipsis-horizontal" /> in Chrome&apos;s menu.
+      </>
+    ),
     shot: require('../assets/install/step-1-share-button.png'),
     width: 200,
     height: 16,
