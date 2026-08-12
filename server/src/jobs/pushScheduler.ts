@@ -14,14 +14,39 @@ const DAILY_MESSAGES: Record<number, string> = {
   6: 'Reflect on your journey. The stars see your progress.',
 };
 
+/**
+ * Sends one push and returns HOW MANY DEVICES IT ACTUALLY REACHED.
+ *
+ * 🔴 IT RETURNS A COUNT BECAUSE "THE API ACCEPTED IT" AND "SOMEONE GOT IT" ARE
+ *    DIFFERENT THINGS, AND THIS USED TO CONFLATE THEM. axios throws only on
+ *    4xx/5xx. When the external_id matches no SUBSCRIBED device, OneSignal
+ *    replies HTTP **200** with `recipients: 0` — commonly alongside
+ *    `errors: ["All included players are not subscribed"]`. That is a
+ *    successful API call describing a delivery to nobody.
+ *
+ *    The caller writes a "last sent" timestamp on return, and that timestamp is
+ *    the DE-DUPE KEY. So a delivery to zero devices used to mark the user as
+ *    notified and skip them — for the rest of the day on the daily insight, and
+ *    FOR SEVEN DAYS on re-engagement. Any transient gap (a reinstall, a revoked
+ *    permission, a rotated token, an external_id not yet attached) silently
+ *    cost the user their notification, and `sentCount` counted it as sent, so
+ *    the one number that would have revealed it agreed with the bug.
+ *
+ *    ⚠️ RE-ENGAGEMENT IS THE WORST CASE, and the mechanism is anti-correlated
+ *    with its purpose: it targets users absent for seven days, who are the most
+ *    likely to have a stale or missing subscription, and each miss locked them
+ *    out for another week.
+ *
+ * Callers MUST treat 0 as not-sent and leave their timestamp alone.
+ */
 async function sendOneSignalPush(
   userId: string,
   headings: { en: string },
   contents: { en: string },
   name: string,
   data?: Record<string, string>
-): Promise<void> {
-  await axios.post(
+): Promise<number> {
+  const response = await axios.post<{ recipients?: number; errors?: unknown }>(
     'https://api.onesignal.com/notifications',
     {
       app_id: process.env.ONESIGNAL_APP_ID,
@@ -39,6 +64,20 @@ async function sendOneSignalPush(
       },
     }
   );
+
+  // A missing `recipients` is treated as zero rather than as success: an
+  // unrecognised response shape is not evidence that anything was delivered.
+  const recipients = typeof response.data?.recipients === 'number' ? response.data.recipients : 0;
+
+  if (recipients === 0) {
+    const detail = response.data?.errors ? ` — ${JSON.stringify(response.data.errors)}` : '';
+    logger.warn(
+      `[Scheduler] OneSignal accepted the push for user ${userId} but delivered it to 0 ` +
+        `recipients${detail}. Not marking it sent, so the next window can retry.`
+    );
+  }
+
+  return recipients;
 }
 
 let dailyTickRunning = false;
@@ -66,6 +105,9 @@ async function runDailyInsightTick(): Promise<void> {
     let failedCount = 0;
     let skippedCount = 0;
     let matchedCount = 0;
+    // Counted separately from sent AND from failed: the request succeeded, it
+    // simply reached nobody. Folding it into either would hide it.
+    let undeliveredCount = 0;
 
     for (const user of users) {
       const { timezone, dailyInsightTime, notifications } = user.preferences;
@@ -111,16 +153,25 @@ async function runDailyInsightTick(): Promise<void> {
       const dateStr = `${zonedNow.getFullYear()}-${String(zonedNow.getMonth() + 1).padStart(2, '0')}-${String(zonedNow.getDate()).padStart(2, '0')}`;
 
       try {
-        await sendOneSignalPush(
+        const recipients = await sendOneSignalPush(
           userId,
           { en: 'Your Daily Cosmic Insight ✨' },
           { en: message },
           `daily-insight-${userId}-${dateStr}`,
           { screen: 'daily-insight' }
         );
-        await User.updateOne({ _id: user._id }, { $set: { lastDailyPushSentAt: now } });
-        logger.info(`[Scheduler] Sent daily push to user ${userId}`);
-        sentCount++;
+
+        // 🔴 THE TIMESTAMP IS THE DE-DUPE KEY, so writing it after a delivery to
+        //    nobody spends the user's day. Left alone on 0, which is what lets a
+        //    user who subscribes later in the day still receive one when they
+        //    move their notification time.
+        if (recipients > 0) {
+          await User.updateOne({ _id: user._id }, { $set: { lastDailyPushSentAt: now } });
+          logger.info(`[Scheduler] Sent daily push to user ${userId} (${recipients} recipient(s))`);
+          sentCount++;
+        } else {
+          undeliveredCount++;
+        }
       } catch (err) {
         const errorMessage = axios.isAxiosError(err) ? err.message : String(err);
         logger.error(`[Scheduler] Failed to send to user ${userId}: ${errorMessage}`, {
@@ -131,7 +182,8 @@ async function runDailyInsightTick(): Promise<void> {
     }
 
     logger.info(
-      `[Scheduler] Daily tick: matched=${matchedCount} sent=${sentCount} failed=${failedCount} skipped=${skippedCount}`
+      `[Scheduler] Daily tick: matched=${matchedCount} sent=${sentCount} ` +
+        `undelivered=${undeliveredCount} failed=${failedCount} skipped=${skippedCount}`
     );
   } finally {
     dailyTickRunning = false;
@@ -160,13 +212,14 @@ async function runReengagementTick(): Promise<void> {
 
     let sentCount = 0;
     let failedCount = 0;
+    let undeliveredCount = 0;
 
     const dateStr = now.toISOString().split('T')[0] ?? now.toISOString().slice(0, 10);
 
     for (const user of users) {
       const userId = user._id.toString();
       try {
-        await sendOneSignalPush(
+        const recipients = await sendOneSignalPush(
           userId,
           { en: 'We miss you ✨' },
           {
@@ -174,12 +227,24 @@ async function runReengagementTick(): Promise<void> {
           },
           `reengagement-${userId}-${dateStr}`
         );
-        await User.updateOne(
-          { _id: user._id },
-          { $set: { lastReengagementPushSentAt: now } }
-        );
-        logger.info(`[Scheduler] Sent re-engagement push to user ${userId}`);
-        sentCount++;
+
+        // 🔴 SEVEN DAYS RIDE ON THIS BRANCH, which makes it the worse half of the
+        //    same bug. This audience is BY DEFINITION users absent for a week, so
+        //    they are the most likely to have a stale or missing subscription —
+        //    and marking an undelivered push as sent bought each of them another
+        //    week of silence. The mechanism was anti-correlated with the purpose.
+        if (recipients > 0) {
+          await User.updateOne(
+            { _id: user._id },
+            { $set: { lastReengagementPushSentAt: now } }
+          );
+          logger.info(
+            `[Scheduler] Sent re-engagement push to user ${userId} (${recipients} recipient(s))`
+          );
+          sentCount++;
+        } else {
+          undeliveredCount++;
+        }
       } catch (err) {
         const errorMessage = axios.isAxiosError(err) ? err.message : String(err);
         logger.error(`[Scheduler] Failed to send re-engagement push to user ${userId}: ${errorMessage}`, {
@@ -189,7 +254,10 @@ async function runReengagementTick(): Promise<void> {
       }
     }
 
-    logger.info(`[Scheduler] Re-engagement tick: sent=${sentCount} failed=${failedCount}`);
+    logger.info(
+      `[Scheduler] Re-engagement tick: sent=${sentCount} undelivered=${undeliveredCount} ` +
+        `failed=${failedCount}`
+    );
   } finally {
     reengagementTickRunning = false;
   }
