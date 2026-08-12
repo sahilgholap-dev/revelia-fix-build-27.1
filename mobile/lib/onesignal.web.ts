@@ -150,8 +150,34 @@ export async function optOutOfNotifications(): Promise<void> {
   await withOneSignal((api) => api.User.PushSubscription.optOut());
 }
 
+/**
+ * Opts in — but only if not already opted in.
+ *
+ * 🔴 THE GUARD IS THE FIX FOR DUPLICATE NOTIFICATIONS, AND THE ASYMMETRY WITH
+ *    NATIVE IS THE REASON IT LIVES HERE. The profile toggle calls
+ *    requestNotificationPermission() and then this, unconditionally, on both
+ *    platforms. On NATIVE that is correct: requestPermission grants permission
+ *    and optIn is what actually subscribes. On WEB, requestPermission ALREADY
+ *    subscribes — so the follow-up opt-in is redundant, and on the v16 web SDK a
+ *    redundant opt-in can re-register and MINT A SECOND SUBSCRIPTION for the same
+ *    browser.
+ *
+ *    Every extra subscription is permanent and sits under the same external_id,
+ *    so the cost is not one stray welcome notification: EVERY FUTURE PUSH
+ *    ARRIVES ONCE PER SUBSCRIPTION. Observed climbing 2 -> 3 across reinstalls.
+ *
+ *    Fixed in the fork rather than at the call site so Android's shipped
+ *    behaviour is untouched — there, both calls are load-bearing.
+ *
+ * ⚠️ This stops NEW duplicates. Subscriptions already minted are data, not code,
+ *    and have to be deleted in the OneSignal dashboard or they keep multiplying
+ *    delivery.
+ */
 export async function optInToNotifications(): Promise<void> {
-  await withOneSignal((api) => api.User.PushSubscription.optIn());
+  await withOneSignal(async (api) => {
+    if (api.User.PushSubscription.optedIn === true) return;
+    await api.User.PushSubscription.optIn();
+  });
 }
 
 export function setUserTags(tags: Record<string, string>): void {
