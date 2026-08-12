@@ -55,6 +55,45 @@ export function isStandaloneDisplay(): boolean {
   return byDisplayMode || byLegacyFlag;
 }
 
+/**
+ * Best-effort hand-off of the current URL to Safari, paired with a clipboard copy.
+ *
+ * ⚠️ THE HAND-OFF CANNOT BE RELIED ON AND THE CALLER MUST NOT PRETEND IT CAN.
+ * iOS exposes no supported way for a web page to launch Safari; `x-safari-` is
+ * an Apple-internal scheme that has worked from third-party iOS browsers on some
+ * versions and been closed on others, and when it is blocked the navigation is
+ * simply ignored — no error, no event, nothing to catch.
+ *
+ * So the copy is not a fallback that appears after a failure; it happens on the
+ * SAME tap. If the hand-off works the user is gone and never reads the
+ * confirmation. If it does not, the link is already on their clipboard. There is
+ * no third outcome where the tap did nothing.
+ *
+ * Returns whether the copy succeeded, which is the only half that can be known.
+ */
+export async function openInSafariAndCopy(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  const href = window.location.href;
+
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(href);
+    copied = true;
+  } catch {
+    // Clipboard access can be refused by permission or by an insecure context.
+    // Nothing to recover — the caller says so rather than claiming success.
+  }
+
+  try {
+    window.location.href = `x-safari-${href}`;
+  } catch {
+    // Blocked schemes throw in some shells and are silently dropped in others.
+  }
+
+  return copied;
+}
+
 export function pwaGateMode(): PwaGateMode {
   // Rendered during a static export with no DOM, so never assume one.
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return 'none';

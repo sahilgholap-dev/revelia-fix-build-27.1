@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
-import { pwaGateMode } from '@/lib/pwaGate.web';
+import { pwaGateMode, openInSafariAndCopy } from '@/lib/pwaGate.web';
 import { PLAY_STORE_URL, androidLaunchIntentUrl } from '@/lib/storeLinks';
 import * as t from '@/theme';
 
@@ -221,10 +221,43 @@ function InstallInstructions() {
       {/* The pre-16.4 tail. Those versions really are Safari-only, and this line
           is cheaper and more durable than parsing a version out of a user agent
           to show them a different screen. */}
-      <Footnote>
-        No Add to Home Screen in your browser? Open this page in Safari instead. Already added it?
-        Open Revelia from your Home Screen rather than this tab.
-      </Footnote>
+      <SafariFootnote />
     </Screen>
+  );
+}
+
+/**
+ * The footnote, with "Safari" tappable.
+ *
+ * ⚠️ TAPPING IT COPIES THE LINK AND ATTEMPTS THE HAND-OFF ON THE SAME TAP, which
+ * is deliberate rather than belt-and-braces: iOS gives a page no supported way to
+ * open Safari and no signal when the attempt is refused, so a control that only
+ * tried to hand off could silently do nothing. Copying alongside means the tap
+ * always accomplishes something — and if the hand-off did work, the user is gone
+ * and never sees the confirmation.
+ */
+function SafariFootnote() {
+  const [copied, setCopied] = useState<boolean | null>(null);
+
+  return (
+    <Footnote>
+      {copied === null ? (
+        <>
+          No Add to Home Screen in your browser? Open this page in{' '}
+          <Text
+            accessibilityRole="link"
+            onPress={async () => setCopied(await openInSafariAndCopy())}
+            style={{ color: t.color.accent, textDecorationLine: 'underline' }}
+          >
+            Safari
+          </Text>{' '}
+          instead. Already added it? Open Revelia from your Home Screen rather than this tab.
+        </>
+      ) : copied ? (
+        'Link copied. If Safari did not open, paste it into Safari and add Revelia from there.'
+      ) : (
+        'Copy the address from the bar above and open it in Safari to add Revelia.'
+      )}
+    </Footnote>
   );
 }
