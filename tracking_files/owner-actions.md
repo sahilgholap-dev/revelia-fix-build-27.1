@@ -3284,4 +3284,40 @@ It only takes the sign-out path when `router.canGoBack()` is false.
 None of that is in scope for this branch. Recorded here as a known, accepted consequence with its
 cause — not a bug to chase, but do not let it get lost either.
 
-> ## 🔴 ▶ **NEXT FREE P-NUMBER: P116.**
+## 🆕 P116 — WEB PUSH: DELIVERY IS UNVERIFIED UNTIL A PHYSICAL iPHONE RECEIVES ONE (2026-08-12)
+
+### 🔴 `P116` — **WEB PUSH IS WIRED AND SUBSCRIBING, BUT NO NOTIFICATION HAS EVER ARRIVED** · ⬜ open · owner · needs a device
+
+`ce92865` implemented OneSignal web push for installed PWAs. **What is verified, on the live
+origin and not merely locally:** the SDK initialises, a subscribe succeeds
+(`permission=true optedIn=true`), the worker serves as `application/javascript`, and — the load-bearing
+one — **OneSignal's worker registered in its own `/push/onesignal/` scope while the app's `/sw.js`
+kept the root**, so the offline shell was not displaced.
+
+🔴 **WHAT IS NOT VERIFIED, AND CANNOT BE FROM THIS MACHINE:**
+
+1. **A notification actually arriving on a physical iPhone.** iOS web push needs iOS 16.4+ AND the
+   PWA installed to the Home Screen; a desktop browser with an iPhone user agent does not have
+   Safari's push stack, so any "pass" from a driven browser would be false.
+2. **That the existing daily scheduler reaches web subscribers.** The design's central claim is that
+   `external_id` targeting means NO server change. The subscription created during verification is
+   ANONYMOUS — nobody was signed in — so it proves subscribing works and proves nothing about
+   targeting. A signed-in subscription is needed.
+3. **That the offline shell still works on the installed PWA.** The registration check passed in a
+   desktop browser; the thing that matters is Airplane Mode on the device.
+
+**To close it:** install the PWA on an iPhone, sign in, toggle notifications on in Profile, confirm a
+**Web** subscription appears in OneSignal → Audience → Subscriptions **carrying the Mongo `_id` as
+its external_id**, send one from the dashboard or the server, and confirm it arrives. Then Airplane
+Mode and reopen the app.
+
+⚠️ **Housekeeping:** verification created one anonymous Web subscription in the OneSignal app from a
+headless browser on 2026-08-12. Harmless, but it is not a real user — delete it if subscription
+counts are being read for anything.
+
+⚠️ **`EXPO_PUBLIC_ONESIGNAL_APP_ID` now has to be in the shell that runs `web:deploy`.** It is in
+`mobile/.env` locally. It was NEVER there before — only `eas.json` had it, which reaches native
+builds only. A deploy from a machine without it produces a bundle where push silently never
+initialises, with no error.
+
+> ## 🔴 ▶ **NEXT FREE P-NUMBER: P117.**

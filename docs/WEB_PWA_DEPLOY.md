@@ -96,6 +96,37 @@ Same file type, same `/assets/` root — the `node_modules` segment is the whole
 
 **If icons ever vanish on a deploy again**, check the upload count first — a correct deploy uploads **55** files. Before the fix it uploaded 19.
 
+## Push notifications
+
+Wired in `ce92865`. Uses the **same OneSignal app as Android** (`b7e152c6…`), so targeting by
+`external_id` means the existing daily scheduler reaches web subscribers **with no server change**.
+
+🔴 **THE SERVICE-WORKER PATH IS CONFIGURED IN THREE PLACES AND ALL THREE MUST AGREE.** A mismatch
+fails at subscription time with an error that does not name the mismatch:
+
+| where | value |
+|---|---|
+| the file | `mobile/public/push/onesignal/OneSignalSDKWorker.js` |
+| `OneSignal.init()` in `lib/onesignal.web.ts` | `serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js'`, `serviceWorkerParam: { scope: '/push/onesignal/' }` |
+| OneSignal dashboard → Web → Advanced Push Settings | path `/push/onesignal/`, filename `OneSignalSDKWorker.js`, scope `/push/onesignal/` |
+
+**Why it is not at the root:** the app already registers `/sw.js` there, and that worker owns the
+offline shell and PWA install-ability. Two service workers cannot both control one scope — OneSignal
+registering at the root, its default, would displace ours, and the symptom would be offline support
+quietly vanishing days later with nothing pointing at push.
+
+**Requirements, none of them ours:** iOS web push needs **iOS 16.4+ and the PWA installed to the Home
+Screen**. It does not work in a Safari tab, where the permission API rejects. Android is unaffected —
+those visitors go to the Play app.
+
+⚠️ **`EXPO_PUBLIC_ONESIGNAL_APP_ID` must be in the shell that runs `web:deploy`**, alongside the
+Google client ID. It is baked at export time; the Cloudflare dashboard cannot supply it.
+
+⚠️ **OneSignal refuses to initialise on any origin but its configured Site URL.** Measured:
+`[OneSignal] init failed: Error: Can only be used on: https://app.revelia.me`. So push cannot be
+tested from `localhost` or a pages.dev URL — only on the custom domain. The code treats that failure
+as a warning and carries on, so nothing else breaks.
+
 ## Three things that will bite
 
 **1 · `mobile/.env` must exist before step 2.**
