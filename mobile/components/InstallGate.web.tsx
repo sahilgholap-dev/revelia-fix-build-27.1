@@ -332,7 +332,7 @@ function SafariFootnote() {
     <Footnote>
       {copied === null ? (
         <>
-          No Add to Home Screen in your browser? Open this page in{' '}
+          Can&apos;t see the Add to Home Screen option in your browser? Open this page in{' '}
           <Text
             accessibilityRole="link"
             onPress={async () => setCopied(await openInSafariAndCopy())}
@@ -340,7 +340,7 @@ function SafariFootnote() {
           >
             Safari
           </Text>{' '}
-          instead. Already added it? Open Revelia from your Home Screen rather than this tab.
+          instead.
         </>
       ) : copied ? (
         'Link copied. If Safari did not open, paste it into Safari and add Revelia from there.'
