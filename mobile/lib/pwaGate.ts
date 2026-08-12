@@ -10,7 +10,7 @@
  * by scripts/web-fork-check.js.
  */
 
-export type PwaGateMode = 'none' | 'install-instructions';
+export type PwaGateMode = 'none' | 'install-instructions' | 'android-play';
 
 export function pwaGateMode(): PwaGateMode {
   return 'none';

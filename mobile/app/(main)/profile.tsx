@@ -23,6 +23,7 @@ import { requestNotificationPermission, optInToNotifications, optOutOfNotificati
 import { DateTimeField } from '@/components/ui/DateTimeField';
 import * as Haptics from 'expo-haptics';
 import { version } from '../../package.json';
+import { PLAY_STORE_URL } from '@/lib/storeLinks';
 import * as t from '@/theme';
 import { openPaywall } from '@/lib/paywall';
 
@@ -106,7 +107,7 @@ export default function Profile() {
     const storeUrl = Platform.select({
       // Replace id000000000 with the numeric App Store ID once the app is live on the App Store.
       ios: 'https://apps.apple.com/app/revelia/id000000000',
-      android: 'https://play.google.com/store/apps/details?id=com.revelia.app',
+      android: PLAY_STORE_URL,
     });
     if (storeUrl) {
       Linking.openURL(storeUrl);

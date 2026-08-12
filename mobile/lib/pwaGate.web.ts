@@ -33,7 +33,7 @@
  * Export parity with the native fork is asserted by scripts/web-fork-check.js.
  */
 
-export type PwaGateMode = 'none' | 'install-instructions';
+export type PwaGateMode = 'none' | 'install-instructions' | 'android-play';
 
 function isIosDevice(ua: string, maxTouchPoints: number): boolean {
   if (/iPad|iPhone|iPod/.test(ua)) return true;
@@ -53,10 +53,22 @@ export function pwaGateMode(): PwaGateMode {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return 'none';
 
   const ua = navigator.userAgent || '';
-  if (!isIosDevice(ua, navigator.maxTouchPoints || 0)) return 'none';
 
-  // Already installed — this is the app, not a tab. Nothing to ask for.
+  // Installed is installed, whichever platform — this is the app, not a tab.
+  // Checked before either branch so an installed user is never asked to install.
   if (isStandalone()) return 'none';
 
-  return 'install-instructions';
+  if (isIosDevice(ua, navigator.maxTouchPoints || 0)) return 'install-instructions';
+
+  // 🔴 ANDROID GOES TO PLAY, NOT TO THE PWA, and the asymmetry with iOS is the
+  //    point rather than an inconsistency: Android has a native app and iOS has
+  //    none, so the web build exists FOR iOS. Sending an Android visitor to the
+  //    Play listing gives them the better product; sending an iPhone visitor
+  //    anywhere but the PWA gives them nothing.
+  //
+  //    ⚠️ Excludes Android TVs and the like, which are not the audience, by
+  //    requiring the Mobile token that a phone browser sends.
+  if (/Android/.test(ua) && /Mobile/.test(ua)) return 'android-play';
+
+  return 'none';
 }
